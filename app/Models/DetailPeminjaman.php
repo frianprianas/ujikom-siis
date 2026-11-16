@@ -1,0 +1,40 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class DetailPeminjaman extends Model
+{
+    use HasFactory;
+
+    protected $table = 'detail_peminjaman';
+
+    protected $fillable = [
+        'peminjaman_id',
+        'alat_id',
+        'jumlah',
+        'kondisi_saat_pinjam',
+        'kondisi_saat_kembali',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'jumlah' => 'integer',
+        ];
+    }
+
+    public function peminjaman(): BelongsTo
+    {
+        return $this->belongsTo(Peminjaman::class, 'peminjaman_id');
+    }
+
+    public function alat(): BelongsTo
+    {
+        return $this->belongsTo(Alat::class, 'alat_id');
+    }
+}
+

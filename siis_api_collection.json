@@ -1,0 +1,319 @@
+{
+  "info": {
+    "_postman_id": "siis-inventory-api-v1",
+    "name": "SIIS API (Sistem Informasi Inventaris Sekolah)",
+    "description": "Koleksi REST API Lengkap untuk Aplikasi SIIS (Laravel Backend, Mobile Flutter, & Hardware IoT ESP32)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. IoT Hardware (ESP32 RFID)",
+      "item": [
+        {
+          "name": "Verify RFID Tap (POST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"device_id\": \"ESP32-SARPRAS-01\",\n  \"api_key\": \"siis_secret_key_esp32_2026\",\n  \"rfid_uid\": \"A1B2C3D4\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/rfid/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["rfid", "verify"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Authentication (Sanctum)",
+      "item": [
+        {
+          "name": "Login Siswa (POST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"siswa@siis.sch.id\",\n  \"password\": \"password\",\n  \"device_name\": \"Postman / Flutter\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Get Profile (GET /me)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "me"]
+            }
+          }
+        },
+        {
+          "name": "Logout (POST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Inventaris & QR Scan",
+      "item": [
+        {
+          "name": "Get Katalog Alat (GET)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/alat?search=&kategori_id=&kondisi=",
+              "host": ["{{baseUrl}}"],
+              "path": ["alat"],
+              "query": [
+                { "key": "search", "value": "" },
+                { "key": "kategori_id", "value": "" },
+                { "key": "kondisi", "value": "" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Scan QR / Barcode Alat (GET)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/alat/scan/PROJ-001",
+              "host": ["{{baseUrl}}"],
+              "path": ["alat", "scan", "PROJ-001"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Modul Peminjaman & Booking",
+      "item": [
+        {
+          "name": "Daftar Peminjaman (GET)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/peminjaman?status=",
+              "host": ["{{baseUrl}}"],
+              "path": ["peminjaman"],
+              "query": [
+                { "key": "status", "value": "" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Ajukan Booking Peminjaman (POST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tanggal_pinjam\": \"2026-11-10\",\n  \"tanggal_harus_kembali\": \"2026-11-12\",\n  \"keperluan\": \"Praktikum presentasi Fisika di Laboratorium\",\n  \"items\": [\n    {\n      \"alat_id\": 1,\n      \"jumlah\": 1\n    },\n    {\n      \"alat_id\": 2,\n      \"jumlah\": 2\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/peminjaman",
+              "host": ["{{baseUrl}}"],
+              "path": ["peminjaman"]
+            }
+          }
+        },
+        {
+          "name": "Approve Peminjaman - Staff/Wakasek (POST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"catatan_approval\": \"Disetujui. Harap menjaga kondisi alat.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/peminjaman/1/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["peminjaman", "1", "approve"]
+            }
+          }
+        },
+        {
+          "name": "Reject Peminjaman - Staff/Wakasek (POST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"catatan_approval\": \"Stok unit sedang dalam perawatan rutin berkala.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/peminjaman/1/reject",
+              "host": ["{{baseUrl}}"],
+              "path": ["peminjaman", "1", "reject"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Dashboard Monitoring Eksekutif (Kepala Sekolah)",
+      "item": [
+        {
+          "name": "Get Executive Stats (GET)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "stats"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+
