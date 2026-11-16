@@ -40,7 +40,12 @@
                 Tinjau permohonan pinjam alat sekolah, berikan persetujuan atau penolakan, serta konfirmasi serah-terima dan pengembalian barang fisik.
             </p>
         </div>
-        <div class="relative z-10 shrink-0">
+        <div class="relative z-10 shrink-0 flex flex-wrap items-center gap-3">
+            <a href="{{ route('sarpras.peminjaman.direct.create') }}"
+               class="inline-flex items-center space-x-2 bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-600 hover:to-teal-500 text-emerald-950 font-bold px-4 py-2.5 rounded-2xl text-sm shadow-lg shadow-emerald-950/20 transition transform active:scale-95">
+                <i data-lucide="handshake" class="w-4 h-4"></i>
+                <span>+ Pinjam Langsung (Tatap Muka)</span>
+            </a>
             <a href="{{ route('sarpras.laporan.cetak') }}" target="_blank"
                class="inline-flex items-center space-x-2 bg-white/10 hover:bg-white/20 text-white border border-white/20 px-4 py-2.5 rounded-2xl font-semibold text-sm transition">
                 <i data-lucide="printer" class="w-4 h-4"></i>

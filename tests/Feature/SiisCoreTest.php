@@ -691,4 +691,49 @@ class SiisCoreTest extends TestCase
         $this->assertNotNull($peminjaman->tanggal_aktual_kembali);
         $this->assertEquals($initialStock, $alat->fresh()->stok_tersedia);
     }
+
+    /**
+     * Test layanan peminjaman langsung tatap muka di meja Sarpras (status langsung sedang_dipinjam).
+     */
+    public function test_sarpras_can_create_direct_face_to_face_loan_instantly(): void
+    {
+        $staff = User::where('role', 'staff_sarpras')->first();
+        $siswa = User::where('email', 'dimas.pratama@siis.sch.id')->first();
+        $alat = Alat::where('stok_tersedia', '>=', 1)->first();
+        $initialStock = $alat->stok_tersedia;
+
+        // 1. Tampilkan form peminjaman langsung
+        $this->actingAs($staff)->get(route('sarpras.peminjaman.direct.create'))
+            ->assertStatus(200)
+            ->assertSee('Pelayanan Peminjaman Langsung');
+
+        // 2. Input peminjaman tatap muka langsung serah terima
+        $response = $this->actingAs($staff)->post(route('sarpras.peminjaman.direct.store'), [
+            'user_id' => $siswa->id,
+            'tanggal_pinjam' => now()->toDateString(),
+            'tanggal_harus_kembali' => now()->addDays(1)->toDateString(),
+            'keperluan' => 'Praktikum jaringan tatap muka',
+            'items' => [
+                ['alat_id' => $alat->id, 'jumlah' => 1],
+            ],
+        ]);
+
+        $response->assertRedirect(route('sarpras.dashboard'));
+        $response->assertSessionHas('success');
+
+        // Verifikasi peminjaman langsung tercatat dengan status 'sedang_dipinjam' dan stok terpotong
+        $directLoan = Peminjaman::where('user_id', $siswa->id)->latest('id')->first();
+        $this->assertNotNull($directLoan);
+        $this->assertEquals('sedang_dipinjam', $directLoan->status);
+        $this->assertEquals($staff->id, $directLoan->approved_by_id);
+        $this->assertEquals($initialStock - 1, $alat->fresh()->stok_tersedia);
+
+        // Verifikasi pengembalian dari peminjaman langsung
+        $this->actingAs($staff)->post(route('sarpras.peminjaman.return', $directLoan->id))
+            ->assertSessionHas('success');
+
+        $directLoan->refresh();
+        $this->assertEquals('dikembalikan', $directLoan->status);
+        $this->assertEquals($initialStock, $alat->fresh()->stok_tersedia);
+    }
 }

@@ -131,6 +131,12 @@
                         <div>
                             <span class="px-3 text-[10px] font-bold text-emerald-400/90 uppercase tracking-wider block mb-2">Modul Sarpras</span>
                             <div class="space-y-1">
+                                <a href="{{ route('sarpras.peminjaman.direct.create') }}"
+                                   class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition {{ request()->routeIs('sarpras.peminjaman.direct.*') ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md shadow-emerald-500/25' : 'hover:bg-emerald-900/50 hover:text-white text-emerald-200 bg-emerald-900/30 border border-emerald-800/70' }}">
+                                    <i data-lucide="handshake" class="w-4 h-4 shrink-0 text-emerald-300"></i>
+                                    <span>+ Pinjam Langsung (Tatap Muka)</span>
+                                </a>
+
                                 <a href="{{ route('sarpras.dashboard') }}"
                                    class="flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition {{ request()->routeIs('sarpras.dashboard') ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-sm' : 'hover:bg-emerald-900/50 hover:text-white text-emerald-100/80' }}">
                                     <div class="flex items-center space-x-3">

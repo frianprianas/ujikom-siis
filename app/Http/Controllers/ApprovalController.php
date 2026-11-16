@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Alat;
+use App\Models\DetailPeminjaman;
 use App\Models\Peminjaman;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -195,6 +198,97 @@ class ApprovalController extends Controller
             ]);
 
             return back()->with('success', "Peminjaman #{$peminjaman->id} berhasil diselesaikan. Alat telah masuk kembali ke inventaris.");
+        });
+    }
+
+    /**
+     * Tampilkan formulir pelayanan peminjaman langsung (tatap muka) di meja Sarpras.
+     */
+    public function createDirectLoan(Request $request): View
+    {
+        $selectedUserId = $request->query('user_id');
+        $selectedAlatId = $request->query('alat_id');
+
+        $peminjamList = User::whereIn('role', ['siswa', 'guru'])
+            ->orderBy('role')
+            ->orderBy('nama')
+            ->get();
+
+        $alatTersedia = Alat::with('kategori')
+            ->where('stok_tersedia', '>', 0)
+            ->orderBy('nama_alat')
+            ->get();
+
+        return view('sarpras.approval.direct_loan', compact('peminjamList', 'alatTersedia', 'selectedUserId', 'selectedAlatId'));
+    }
+
+    /**
+     * Simpan peminjaman langsung di meja Sarpras (status otomatis 'sedang_dipinjam' & serah terima fisik saat itu juga).
+     */
+    public function storeDirectLoan(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'user_id' => ['required', 'integer', 'exists:users,id'],
+            'tanggal_pinjam' => ['required', 'date'],
+            'tanggal_harus_kembali' => ['required', 'date', 'after_or_equal:tanggal_pinjam'],
+            'keperluan' => ['nullable', 'string', 'max:500'],
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.alat_id' => ['required', 'integer', 'exists:alat,id'],
+            'items.*.jumlah' => ['required', 'integer', 'min:1'],
+        ], [
+            'user_id.required' => 'Pilih siswa atau guru peminjam yang datang ke Sarpras.',
+            'items.min' => 'Pilih minimal 1 item alat yang diserahkan.',
+            'tanggal_harus_kembali.after_or_equal' => 'Tanggal batas kembali tidak boleh sebelum tanggal pinjam.',
+        ]);
+
+        $peminjam = User::findOrFail($validated['user_id']);
+
+        return DB::transaction(function () use ($validated, $peminjam) {
+            // 1. Verifikasi stok tersedia
+            foreach ($validated['items'] as $item) {
+                $alat = Alat::findOrFail($item['alat_id']);
+                if ($alat->stok_tersedia < $item['jumlah']) {
+                    return back()->withInput()->with('error', "Stok untuk alat '{$alat->nama_alat}' tidak mencukupi (Tersedia: {$alat->stok_tersedia} unit).");
+                }
+            }
+
+            // 2. Buat Peminjaman dengan status LANGSUNG 'sedang_dipinjam' (serah terima langsung)
+            $peminjaman = Peminjaman::create([
+                'user_id' => $peminjam->id,
+                'tanggal_pengajuan' => now(),
+                'tanggal_pinjam' => $validated['tanggal_pinjam'],
+                'tanggal_harus_kembali' => $validated['tanggal_harus_kembali'],
+                'status' => 'sedang_dipinjam',
+                'approved_by_id' => Auth::id(),
+                'tanggal_approval' => now(),
+                'catatan_approval' => 'Layanan Tatap Muka Meja Sarpras' . (!empty($validated['keperluan']) ? " | Keperluan: {$validated['keperluan']}" : ''),
+            ]);
+
+            // 3. Buat Detail Peminjaman & potong stok langsung
+            foreach ($validated['items'] as $item) {
+                $alat = Alat::findOrFail($item['alat_id']);
+
+                // Hubungkan ke unit fisik jika ada
+                $availableUnit = $alat->units()->where('status', 'tersedia')->first();
+                $unitAlatId = null;
+                if ($availableUnit) {
+                    $unitAlatId = $availableUnit->id;
+                    $availableUnit->update(['status' => 'dipinjam']);
+                }
+
+                DetailPeminjaman::create([
+                    'peminjaman_id' => $peminjaman->id,
+                    'alat_id' => $alat->id,
+                    'unit_alat_id' => $unitAlatId,
+                    'jumlah' => $item['jumlah'],
+                    'kondisi_saat_pinjam' => in_array($alat->kondisi, ['baik', 'rusak_ringan']) ? $alat->kondisi : 'baik',
+                ]);
+
+                $alat->decrement('stok_tersedia', $item['jumlah']);
+            }
+
+            return redirect()->route('sarpras.dashboard')
+                ->with('success', "Peminjaman langsung #{$peminjaman->id} berhasil dicatat. Barang fisik telah diserahkan di tempat kepada {$peminjam->nama} ({$peminjam->role}).");
         });
     }
 

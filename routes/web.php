@@ -91,6 +91,8 @@ Route::middleware('auth')->group(function () {
     // ACC / Approval Peminjaman (Staff, Wakasek, Super Admin)
     Route::middleware('role:super_admin,staff_sarpras,wakasek_sarpras')->prefix('sarpras')->name('sarpras.')->group(function () {
         Route::get('/dashboard', [ApprovalController::class, 'index'])->name('dashboard');
+        Route::get('/peminjaman-langsung', [ApprovalController::class, 'createDirectLoan'])->name('peminjaman.direct.create');
+        Route::post('/peminjaman-langsung', [ApprovalController::class, 'storeDirectLoan'])->name('peminjaman.direct.store');
         Route::post('/peminjaman/{id}/approve', [ApprovalController::class, 'approve'])->name('peminjaman.approve');
         Route::post('/peminjaman/{id}/reject', [ApprovalController::class, 'reject'])->name('peminjaman.reject');
         Route::post('/peminjaman/{id}/borrow', [ApprovalController::class, 'markAsBorrowed'])->name('peminjaman.borrow');
