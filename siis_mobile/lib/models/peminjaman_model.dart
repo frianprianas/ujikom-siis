@@ -1,23 +1,28 @@
 import 'alat_model.dart';
+import 'unit_alat_model.dart';
 import 'user_model.dart';
 
 class DetailPeminjamanModel {
   final int id;
   final int peminjamanId;
   final int alatId;
+  final int? unitAlatId;
   final int jumlah;
   final String? kondisiSaatPinjam;
   final String? kondisiSaatKembali;
   final AlatModel? alat;
+  final UnitAlatModel? unitAlat;
 
   DetailPeminjamanModel({
     required this.id,
     required this.peminjamanId,
     required this.alatId,
+    this.unitAlatId,
     required this.jumlah,
     this.kondisiSaatPinjam,
     this.kondisiSaatKembali,
     this.alat,
+    this.unitAlat,
   });
 
   factory DetailPeminjamanModel.fromJson(Map<String, dynamic> json) {
@@ -25,12 +30,18 @@ class DetailPeminjamanModel {
       id: json['id'] as int,
       peminjamanId: json['peminjaman_id'] as int,
       alatId: json['alat_id'] as int,
+      unitAlatId: json['unit_alat_id'] as int?,
       jumlah: json['jumlah'] as int? ?? 1,
       kondisiSaatPinjam: json['kondisi_saat_pinjam'] as String?,
       kondisiSaatKembali: json['kondisi_saat_kembali'] as String?,
       alat: json['alat'] != null
           ? AlatModel.fromJson(json['alat'] as Map<String, dynamic>)
           : null,
+      unitAlat: json['unit_alat'] != null
+          ? UnitAlatModel.fromJson(json['unit_alat'] as Map<String, dynamic>)
+          : (json['unitAlat'] != null
+              ? UnitAlatModel.fromJson(json['unitAlat'] as Map<String, dynamic>)
+              : null),
     );
   }
 
@@ -39,10 +50,12 @@ class DetailPeminjamanModel {
       'id': id,
       'peminjaman_id': peminjamanId,
       'alat_id': alatId,
+      'unit_alat_id': unitAlatId,
       'jumlah': jumlah,
       'kondisi_saat_pinjam': kondisiSaatPinjam,
       'kondisi_saat_kembali': kondisiSaatKembali,
       'alat': alat?.toJson(),
+      'unit_alat': unitAlat?.toJson(),
     };
   }
 }

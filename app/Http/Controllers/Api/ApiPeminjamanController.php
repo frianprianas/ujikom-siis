@@ -21,7 +21,7 @@ class ApiPeminjamanController extends Controller
         $user = $request->user();
         $status = $request->query('status');
 
-        $query = Peminjaman::with(['user', 'approvedBy', 'details.alat.kategori'])
+        $query = Peminjaman::with(['user', 'approvedBy', 'details.alat.kategori', 'details.unitAlat'])
             ->latest('tanggal_pengajuan');
 
         if (in_array($user->role, ['siswa', 'guru'])) {
@@ -141,6 +141,13 @@ class ApiPeminjamanController extends Controller
 
             foreach ($peminjaman->details as $detail) {
                 $detail->alat->decrement('stok_tersedia', $detail->jumlah);
+                if (! $detail->unit_alat_id) {
+                    $availableUnit = $detail->alat->units()->where('status', 'tersedia')->first();
+                    if ($availableUnit) {
+                        $detail->update(['unit_alat_id' => $availableUnit->id]);
+                        $availableUnit->update(['status' => 'dipinjam']);
+                    }
+                }
             }
 
             $peminjaman->update([
@@ -153,7 +160,7 @@ class ApiPeminjamanController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => "Pengajuan #{$peminjaman->id} berhasil disetujui.",
-                'data' => $peminjaman,
+                'data' => $peminjaman->fresh(['details.alat', 'details.unitAlat', 'user']),
             ]);
         });
     }
@@ -228,6 +235,13 @@ class ApiPeminjamanController extends Controller
 
             foreach ($peminjaman->details as $detail) {
                 $detail->alat->increment('stok_tersedia', $detail->jumlah);
+                if ($detail->unit_alat_id) {
+                    $kondisiAkhir = $detail->kondisi_saat_kembali ?: $detail->kondisi_saat_pinjam ?: 'baik';
+                    $detail->unitAlat?->update([
+                        'status' => 'tersedia',
+                        'kondisi' => in_array($kondisiAkhir, ['baik', 'rusak_ringan', 'rusak_berat']) ? $kondisiAkhir : 'baik',
+                    ]);
+                }
             }
 
             $peminjaman->update([
@@ -238,7 +252,7 @@ class ApiPeminjamanController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => "Peminjaman #{$peminjaman->id} berhasil dikembalikan. Stok alat telah dipulihkan.",
-                'data' => $peminjaman->fresh(['details.alat', 'user']),
+                'data' => $peminjaman->fresh(['details.alat', 'details.unitAlat', 'user']),
             ]);
         });
     }

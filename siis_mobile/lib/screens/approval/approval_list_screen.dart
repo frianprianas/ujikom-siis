@@ -273,9 +273,24 @@ class _ApprovalListScreenState extends State<ApprovalListScreen> {
                                 return Padding(
                                   padding: const EdgeInsets.only(bottom: 4),
                                   child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Text('• ${d.alat?.namaAlat ?? 'Alat'}', style: const TextStyle(fontSize: 13, color: Color(0xFF334155))),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text('• ${d.alat?.namaAlat ?? 'Alat'}', style: const TextStyle(fontSize: 13, color: Color(0xFF334155))),
+                                            if (d.unitAlat != null) ...[
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                '  Unit: ${d.unitAlat!.kodeUnit}',
+                                                style: const TextStyle(fontSize: 11, fontFamily: 'monospace', fontWeight: FontWeight.bold, color: Color(0xFF047857)),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
                                       Text('${d.jumlah} unit', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF059669))),
                                     ],
                                   ),

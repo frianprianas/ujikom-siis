@@ -137,10 +137,33 @@ class _PeminjamanHistoryScreenState extends State<PeminjamanHistoryScreen> {
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(detail.alat?.namaAlat ?? 'Alat #${detail.alatId}',
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF334155))),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(detail.alat?.namaAlat ?? 'Alat #${detail.alatId}',
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF334155))),
+                            if (detail.unitAlat != null) ...[
+                              const SizedBox(height: 3),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFECFDF5),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: const Color(0xFFA7F3D0)),
+                                ),
+                                child: Text(
+                                  'Unit: ${detail.unitAlat!.kodeUnit}${detail.unitAlat!.nomorSeri != null ? ' (${detail.unitAlat!.nomorSeri})' : ''}',
+                                  style: const TextStyle(fontSize: 11, fontFamily: 'monospace', fontWeight: FontWeight.bold, color: Color(0xFF065F46)),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
                       Text('${detail.jumlah} unit',
                           style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF059669))),
                     ],
@@ -177,7 +200,7 @@ class _PeminjamanHistoryScreenState extends State<PeminjamanHistoryScreen> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Waktu Dikembalikan: ${loan.tanggalAktualKembali != null ? loan.tanggalAktualKembali!.split('T').first : 'Telah Masuk Gudang'}',
+                        'Waktu Dikembalikan: ${loan.tanggalAktualKembali != null ? loan.tanggalAktualKembali!.split('T').first : 'Telah Masuk Inventaris'}',
                         style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF166534)),
                       ),
                       const SizedBox(height: 2),
