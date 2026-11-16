@@ -15,6 +15,7 @@ class DetailPeminjaman extends Model
     protected $fillable = [
         'peminjaman_id',
         'alat_id',
+        'unit_alat_id',
         'jumlah',
         'kondisi_saat_pinjam',
         'kondisi_saat_kembali',
@@ -35,6 +36,11 @@ class DetailPeminjaman extends Model
     public function alat(): BelongsTo
     {
         return $this->belongsTo(Alat::class, 'alat_id');
+    }
+
+    public function unitAlat(): BelongsTo
+    {
+        return $this->belongsTo(UnitAlat::class, 'unit_alat_id');
     }
 }
 

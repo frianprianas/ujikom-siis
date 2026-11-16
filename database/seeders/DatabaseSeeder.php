@@ -3,8 +3,10 @@
 namespace Database\Seeders;
 
 use App\Models\Alat;
+use App\Models\DetailPeminjaman;
 use App\Models\IotDevice;
 use App\Models\Kategori;
+use App\Models\Peminjaman;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -54,6 +56,7 @@ class DatabaseSeeder extends Seeder
                 'rfid_uid' => '99001122',
                 'kelas_atau_jabatan' => 'Kepala Sekolah (Monitoring Eksekutif)',
             ],
+            // -------------------- GURU --------------------
             [
                 'nama' => 'Budi Santoso, S.Pd',
                 'email' => 'guru@siis.sch.id',
@@ -61,8 +64,27 @@ class DatabaseSeeder extends Seeder
                 'role' => 'guru',
                 'nomor_identitas' => 'NIP198501012010011001',
                 'rfid_uid' => 'E5F6G7H8',
-                'kelas_atau_jabatan' => 'Guru Fisika',
+                'kelas_atau_jabatan' => 'Guru Fisika & Pembina KIR',
             ],
+            [
+                'nama' => 'Dra. Ratna Sartika, M.Pd',
+                'email' => 'ratna.sartika@siis.sch.id',
+                'password' => Hash::make('password'),
+                'role' => 'guru',
+                'nomor_identitas' => 'NIP198203152008012005',
+                'rfid_uid' => 'D4E5F6A1',
+                'kelas_atau_jabatan' => 'Guru Matematika & Kepala Lab Sains',
+            ],
+            [
+                'nama' => 'Hendra Kurnia, S.Kom',
+                'email' => 'hendra.kurnia@siis.sch.id',
+                'password' => Hash::make('password'),
+                'role' => 'guru',
+                'nomor_identitas' => 'NIP199009182015021003',
+                'rfid_uid' => 'B3C4D5E6',
+                'kelas_atau_jabatan' => 'Guru Rekayasa Perangkat Lunak (RPL)',
+            ],
+            // -------------------- SISWA --------------------
             [
                 'nama' => 'Ahmad Siswa',
                 'email' => 'siswa@siis.sch.id',
@@ -71,6 +93,51 @@ class DatabaseSeeder extends Seeder
                 'nomor_identitas' => 'NIS2026001',
                 'rfid_uid' => 'A1B2C3D4',
                 'kelas_atau_jabatan' => 'XII RPL 1',
+            ],
+            [
+                'nama' => 'Siti Nurhaliza',
+                'email' => 'siti.nurhaliza@siis.sch.id',
+                'password' => Hash::make('password'),
+                'role' => 'siswa',
+                'nomor_identitas' => 'NIS2026002',
+                'rfid_uid' => 'A2B3C4D5',
+                'kelas_atau_jabatan' => 'XII RPL 2',
+            ],
+            [
+                'nama' => 'Dimas Pratama',
+                'email' => 'dimas.pratama@siis.sch.id',
+                'password' => Hash::make('password'),
+                'role' => 'siswa',
+                'nomor_identitas' => 'NIS2026003',
+                'rfid_uid' => 'A3B4C5D6',
+                'kelas_atau_jabatan' => 'XI TKJ 1',
+            ],
+            [
+                'nama' => 'Putri Ayu Lestari',
+                'email' => 'putri.ayu@siis.sch.id',
+                'password' => Hash::make('password'),
+                'role' => 'siswa',
+                'nomor_identitas' => 'NIS2026004',
+                'rfid_uid' => 'A4B5C6D7',
+                'kelas_atau_jabatan' => 'XI DKV 2',
+            ],
+            [
+                'nama' => 'Fajar Ramadhan',
+                'email' => 'fajar.ramadhan@siis.sch.id',
+                'password' => Hash::make('password'),
+                'role' => 'siswa',
+                'nomor_identitas' => 'NIS2026005',
+                'rfid_uid' => 'A5B6C7D8',
+                'kelas_atau_jabatan' => 'X PPLG 1',
+            ],
+            [
+                'nama' => 'Rina Amelia',
+                'email' => 'rina.amelia@siis.sch.id',
+                'password' => Hash::make('password'),
+                'role' => 'siswa',
+                'nomor_identitas' => 'NIS2026006',
+                'rfid_uid' => 'A6B7C8D9',
+                'kelas_atau_jabatan' => 'XII Multimedia 1',
             ],
         ];
 
@@ -195,5 +262,119 @@ class DatabaseSeeder extends Seeder
                 'status' => 'active',
             ]
         );
+
+        // 5. Data Sampel Peminjaman (Siklus Peminjaman & Pengembalian Berjalan)
+        if (Peminjaman::count() === 0) {
+            $staff = User::where('role', 'staff_sarpras')->first();
+            $siswaAhmad = User::where('email', 'siswa@siis.sch.id')->first();
+            $siswaSiti = User::where('email', 'siti.nurhaliza@siis.sch.id')->first();
+            $siswaDimas = User::where('email', 'dimas.pratama@siis.sch.id')->first();
+            $guruBudi = User::where('email', 'guru@siis.sch.id')->first();
+            $guruRatna = User::where('email', 'ratna.sartika@siis.sch.id')->first();
+
+            $proyektor = Alat::where('kode_alat', 'PRJ-EPS-001')->first();
+            $mikroskop = Alat::where('kode_alat', 'MKS-OLY-001')->first();
+            $pointer = Alat::where('kode_alat', 'PTR-LOG-002')->first();
+            $laptop = Alat::where('kode_alat', 'LPT-ASUS-I5')->first();
+            $bola = Alat::where('kode_alat', 'BBL-MLT-001')->first();
+
+            // Kasus 1: Menunggu Persetujuan (Siswa Ahmad ingin pinjam Proyektor)
+            if ($siswaAhmad && $proyektor) {
+                $p1 = Peminjaman::create([
+                    'user_id' => $siswaAhmad->id,
+                    'tanggal_pengajuan' => now()->subHours(2),
+                    'tanggal_pinjam' => now()->toDateString(),
+                    'tanggal_harus_kembali' => now()->addDays(2)->toDateString(),
+                    'status' => 'menunggu_persetujuan',
+                    'catatan_approval' => 'Keperluan: Presentasi tugas project akhir Web & Mobile di Aula',
+                ]);
+                $p1->details()->create([
+                    'alat_id' => $proyektor->id,
+                    'jumlah' => 1,
+                    'kondisi_saat_pinjam' => 'baik',
+                ]);
+            }
+
+            // Kasus 2: Disetujui / Siap Diambil di Sarpras (Guru Ratna pinjam Mikroskop)
+            if ($guruRatna && $mikroskop && $staff) {
+                $p2 = Peminjaman::create([
+                    'user_id' => $guruRatna->id,
+                    'tanggal_pengajuan' => now()->subHours(5),
+                    'tanggal_pinjam' => now()->toDateString(),
+                    'tanggal_harus_kembali' => now()->addDays(3)->toDateString(),
+                    'status' => 'disetujui',
+                    'approved_by_id' => $staff->id,
+                    'tanggal_approval' => now()->subHours(4),
+                    'catatan_approval' => 'Keperluan: Praktikum Biologi Sel X RPL | ACC: Disetujui, ambil di Lab Lt. 2',
+                ]);
+                $p2->details()->create([
+                    'alat_id' => $mikroskop->id,
+                    'jumlah' => 2,
+                    'kondisi_saat_pinjam' => 'baik',
+                ]);
+                $mikroskop->decrement('stok_tersedia', 2);
+            }
+
+            // Kasus 3: Sedang Dipinjam / Barang di Tangan Peminjam (Siswa Siti pinjam Pointer)
+            if ($siswaSiti && $pointer && $staff) {
+                $p3 = Peminjaman::create([
+                    'user_id' => $siswaSiti->id,
+                    'tanggal_pengajuan' => now()->subDay(),
+                    'tanggal_pinjam' => now()->subDay()->toDateString(),
+                    'tanggal_harus_kembali' => now()->addDays(1)->toDateString(),
+                    'status' => 'sedang_dipinjam',
+                    'approved_by_id' => $staff->id,
+                    'tanggal_approval' => now()->subDay(),
+                    'catatan_approval' => 'Keperluan: Presentasi sidang proposal kejuruan RPL',
+                ]);
+                $p3->details()->create([
+                    'alat_id' => $pointer->id,
+                    'jumlah' => 1,
+                    'kondisi_saat_pinjam' => 'baik',
+                ]);
+                $pointer->decrement('stok_tersedia', 1);
+            }
+
+            // Kasus 4: Sudah Selesai Dikembalikan (Guru Budi pinjam Laptop Asus)
+            if ($guruBudi && $laptop && $staff) {
+                $p4 = Peminjaman::create([
+                    'user_id' => $guruBudi->id,
+                    'tanggal_pengajuan' => now()->subDays(3),
+                    'tanggal_pinjam' => now()->subDays(3)->toDateString(),
+                    'tanggal_harus_kembali' => now()->subDay()->toDateString(),
+                    'tanggal_aktual_kembali' => now()->subHours(3),
+                    'status' => 'dikembalikan',
+                    'approved_by_id' => $staff->id,
+                    'tanggal_approval' => now()->subDays(3),
+                    'catatan_approval' => 'Keperluan: Mengajar materi olimpiade fisika komputasi',
+                ]);
+                $p4->details()->create([
+                    'alat_id' => $laptop->id,
+                    'jumlah' => 1,
+                    'kondisi_saat_pinjam' => 'baik',
+                    'kondisi_saat_kembali' => 'baik',
+                ]);
+            }
+
+            // Kasus 5: Terlambat Mengembalikan (Siswa Dimas pinjam Bola Basket)
+            if ($siswaDimas && $bola && $staff) {
+                $p5 = Peminjaman::create([
+                    'user_id' => $siswaDimas->id,
+                    'tanggal_pengajuan' => now()->subDays(5),
+                    'tanggal_pinjam' => now()->subDays(5)->toDateString(),
+                    'tanggal_harus_kembali' => now()->subDays(2)->toDateString(),
+                    'status' => 'terlambat',
+                    'approved_by_id' => $staff->id,
+                    'tanggal_approval' => now()->subDays(5),
+                    'catatan_approval' => 'Keperluan: Latihan pertandingan basket antar kelas',
+                ]);
+                $p5->details()->create([
+                    'alat_id' => $bola->id,
+                    'jumlah' => 2,
+                    'kondisi_saat_pinjam' => 'baik',
+                ]);
+                $bola->decrement('stok_tersedia', 2);
+            }
+        }
     }
 }

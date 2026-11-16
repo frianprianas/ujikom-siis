@@ -31,6 +31,34 @@
         @endif
     </div>
 
+    <!-- Filter Status Tabs -->
+    <div class="flex flex-wrap gap-2 border-b border-emerald-100 pb-3 text-xs font-semibold">
+        <a href="{{ route('peminjaman.index') }}"
+           class="px-3.5 py-2 rounded-xl transition {{ empty($status) ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-sm' : 'bg-white text-emerald-950 hover:bg-emerald-50 border border-emerald-100' }}">
+            Semua
+        </a>
+        <a href="{{ route('peminjaman.index', ['status' => 'menunggu_persetujuan']) }}"
+           class="px-3.5 py-2 rounded-xl transition {{ $status === 'menunggu_persetujuan' ? 'bg-amber-600 text-white shadow-sm' : 'bg-white text-amber-900 hover:bg-amber-50 border border-amber-200' }}">
+            Menunggu Persetujuan
+        </a>
+        <a href="{{ route('peminjaman.index', ['status' => 'disetujui']) }}"
+           class="px-3.5 py-2 rounded-xl transition {{ $status === 'disetujui' ? 'bg-emerald-700 text-white shadow-sm' : 'bg-white text-emerald-900 hover:bg-emerald-50 border border-emerald-200' }}">
+            Disetujui (Siap Ambil)
+        </a>
+        <a href="{{ route('peminjaman.index', ['status' => 'sedang_dipinjam']) }}"
+           class="px-3.5 py-2 rounded-xl transition {{ $status === 'sedang_dipinjam' ? 'bg-teal-700 text-white shadow-sm' : 'bg-white text-teal-900 hover:bg-teal-50 border border-teal-200' }}">
+            Sedang Dipinjam
+        </a>
+        <a href="{{ route('peminjaman.index', ['status' => 'dikembalikan']) }}"
+           class="px-3.5 py-2 rounded-xl transition {{ $status === 'dikembalikan' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-white text-emerald-900 hover:bg-emerald-50 border border-emerald-200' }}">
+            Selesai Dikembalikan
+        </a>
+        <a href="{{ route('peminjaman.index', ['status' => 'terlambat']) }}"
+           class="px-3.5 py-2 rounded-xl transition {{ $status === 'terlambat' ? 'bg-rose-600 text-white shadow-sm' : 'bg-white text-rose-900 hover:bg-rose-50 border border-rose-200' }}">
+            Terlambat
+        </a>
+    </div>
+
     <!-- Peminjaman Table Card -->
     <div class="bg-white/95 backdrop-blur-md rounded-3xl shadow-sm border border-emerald-100 overflow-hidden">
         <div class="overflow-x-auto">

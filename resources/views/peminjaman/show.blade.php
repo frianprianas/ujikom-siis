@@ -56,6 +56,67 @@
         </div>
     </div>
 
+    <!-- Tindakan Approval & Pengembalian Sarpras (Staff, Wakasek, Super Admin) -->
+    @if(auth()->user()->canApprove() && !in_array($peminjaman->status, ['dikembalikan', 'ditolak']))
+        <div class="bg-gradient-to-r from-emerald-900 via-teal-900 to-emerald-950 rounded-3xl p-6 text-white shadow-lg space-y-4 border border-emerald-800">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <span class="text-xs font-semibold text-emerald-300 uppercase tracking-wider block">Panel Tindakan Petugas Sarpras</span>
+                    <h3 class="text-base font-bold text-white mt-0.5">Kelola Status Peminjaman #{{ str_pad($peminjaman->id, 5, '0', STR_PAD_LEFT) }}</h3>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                    {{-- Status 1: Menunggu Persetujuan -> Setujui / Tolak --}}
+                    @if($peminjaman->status === 'menunggu_persetujuan')
+                        <form method="POST" action="{{ route('sarpras.peminjaman.approve', $peminjaman->id) }}" class="inline">
+                            @csrf
+                            <button type="submit" onclick="return confirm('Setujui pengajuan pinjaman ini? Stok alat akan otomatis dipotong.')"
+                                    class="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white shadow-md transition flex items-center space-x-1.5">
+                                <i data-lucide="check-circle" class="w-4 h-4"></i>
+                                <span>Setujui (ACC)</span>
+                            </button>
+                        </form>
+
+                        <button type="button" onclick="const reason = prompt('Masukkan alasan penolakan:'); if(reason){ document.getElementById('reject-reason').value = reason; document.getElementById('reject-form').submit(); }"
+                                class="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-md transition flex items-center space-x-1.5">
+                            <i data-lucide="x-circle" class="w-4 h-4"></i>
+                            <span>Tolak Pengajuan</span>
+                        </button>
+
+                        <form id="reject-form" method="POST" action="{{ route('sarpras.peminjaman.reject', $peminjaman->id) }}" class="hidden">
+                            @csrf
+                            <input type="hidden" name="catatan_approval" id="reject-reason">
+                        </form>
+                    @endif
+
+                    {{-- Status 2: Disetujui -> Ambil Alat / Kembalikan Langsung --}}
+                    @if($peminjaman->status === 'disetujui')
+                        <form method="POST" action="{{ route('sarpras.peminjaman.borrow', $peminjaman->id) }}" class="inline">
+                            @csrf
+                            <button type="submit" onclick="return confirm('Konfirmasi bahwa barang fisik telah diserahkan dan diambil oleh peminjam?')"
+                                    class="px-4 py-2 rounded-xl text-xs font-bold bg-teal-500 hover:bg-teal-600 text-white shadow-md transition flex items-center space-x-1.5">
+                                <i data-lucide="package-check" class="w-4 h-4"></i>
+                                <span>Serah Terima Alat (Ambil)</span>
+                            </button>
+                        </form>
+                    @endif
+
+                    {{-- Status 3: Sedang Dipinjam / Terlambat -> Kembalikan Alat --}}
+                    @if(in_array($peminjaman->status, ['sedang_dipinjam', 'terlambat', 'disetujui']))
+                        <form method="POST" action="{{ route('sarpras.peminjaman.return', $peminjaman->id) }}" class="inline">
+                            @csrf
+                            <button type="submit" onclick="return confirm('Konfirmasi bahwa seluruh fisik alat telah diperiksa dan dikembalikan ke Sarpras? Stok akan dipulihkan.')"
+                                    class="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md transition flex items-center space-x-1.5">
+                                <i data-lucide="archive" class="w-4 h-4"></i>
+                                <span>Konfirmasi Pengembalian Alat (Selesai)</span>
+                            </button>
+                        </form>
+                    @endif
+                </div>
+            </div>
+        </div>
+    @endif
+
     @if($peminjaman->status === 'dikembalikan')
         <div class="p-4 rounded-3xl bg-emerald-50 border border-emerald-200 text-emerald-900 flex items-start space-x-3 shadow-sm">
             <i data-lucide="check-check" class="w-5 h-5 text-emerald-600 mt-0.5 shrink-0"></i>

@@ -64,9 +64,23 @@ class ApprovalController extends Controller
                 }
             }
 
-            // Kurangi stok tersedia alat
+            // Kurangi stok tersedia alat & sinkronkan unit fisik jika ada
             foreach ($peminjaman->details as $detail) {
                 $detail->alat->decrement('stok_tersedia', $detail->jumlah);
+
+                if (! $detail->unit_alat_id) {
+                    $availableUnit = $detail->alat->units()->where('status', 'tersedia')->first();
+                    if ($availableUnit) {
+                        $detail->update(['unit_alat_id' => $availableUnit->id]);
+                        $availableUnit->update(['status' => 'dipinjam']);
+                    }
+                }
+            }
+
+            $catatanInput = $request->input('catatan_approval');
+            $catatanFinal = $peminjaman->catatan_approval;
+            if ($catatanInput) {
+                $catatanFinal = $catatanFinal ? "{$catatanFinal} | ACC: {$catatanInput}" : $catatanInput;
             }
 
             // Perbarui data peminjaman
@@ -74,7 +88,7 @@ class ApprovalController extends Controller
                 'status' => 'disetujui',
                 'approved_by_id' => Auth::id(),
                 'tanggal_approval' => now(),
-                'catatan_approval' => $request->input('catatan_approval'),
+                'catatan_approval' => $catatanFinal,
             ]);
 
             return back()->with('success', "Pengajuan #{$peminjaman->id} berhasil disetujui oleh " . Auth::user()->nama . '.');
@@ -99,11 +113,16 @@ class ApprovalController extends Controller
             'catatan_approval.required' => 'Wajib menyertakan alasan penolakan peminjaman.',
         ]);
 
+        $catatanInput = $request->input('catatan_approval');
+        $catatanFinal = $peminjaman->catatan_approval 
+            ? "{$peminjaman->catatan_approval} | Alasan Penolakan: {$catatanInput}" 
+            : $catatanInput;
+
         $peminjaman->update([
             'status' => 'ditolak',
             'approved_by_id' => Auth::id(),
             'tanggal_approval' => now(),
-            'catatan_approval' => $request->input('catatan_approval'),
+            'catatan_approval' => $catatanFinal,
         ]);
 
         return back()->with('success', "Pengajuan #{$peminjaman->id} telah ditolak.");
@@ -114,15 +133,21 @@ class ApprovalController extends Controller
      */
     public function markAsBorrowed($id): RedirectResponse
     {
-        $peminjaman = Peminjaman::findOrFail($id);
+        $peminjaman = Peminjaman::with('details.alat')->findOrFail($id);
 
         if ($peminjaman->status !== 'disetujui') {
             return back()->with('error', 'Status peminjaman harus sudah disetujui terlebih dahulu.');
         }
 
+        foreach ($peminjaman->details as $detail) {
+            if ($detail->unit_alat_id) {
+                $detail->unitAlat?->update(['status' => 'dipinjam']);
+            }
+        }
+
         $peminjaman->update(['status' => 'sedang_dipinjam']);
 
-        return back()->with('success', "Status pengajuan #{$peminjaman->id} kini Sedang Dipinjam.");
+        return back()->with('success', "Status pengajuan #{$peminjaman->id} kini Sedang Dipinjam. Alat telah diserahkan fisik.");
     }
 
     /**
@@ -132,7 +157,7 @@ class ApprovalController extends Controller
     {
         $peminjaman = Peminjaman::with('details.alat')->findOrFail($id);
 
-        if (! in_array($peminjaman->status, ['sedang_dipinjam', 'terlambat'])) {
+        if (! in_array($peminjaman->status, ['sedang_dipinjam', 'terlambat', 'disetujui'])) {
             return back()->with('error', 'Alat belum diambil atau sudah pernah dikembalikan.');
         }
 
@@ -144,11 +169,24 @@ class ApprovalController extends Controller
                         'kondisi_saat_kembali' => $kondisi,
                     ]);
                 }
+            } else {
+                foreach ($peminjaman->details as $detail) {
+                    if (! $detail->kondisi_saat_kembali) {
+                        $detail->update(['kondisi_saat_kembali' => $detail->kondisi_saat_pinjam ?: 'baik']);
+                    }
+                }
             }
 
-            // Kembalikan stok tersedia
+            // Kembalikan stok tersedia & pulihkan unit fisik
             foreach ($peminjaman->details as $detail) {
                 $detail->alat->increment('stok_tersedia', $detail->jumlah);
+                if ($detail->unit_alat_id) {
+                    $kondisiAkhir = $detail->kondisi_saat_kembali ?: $detail->kondisi_saat_pinjam ?: 'baik';
+                    $detail->unitAlat?->update([
+                        'status' => 'tersedia',
+                        'kondisi' => in_array($kondisiAkhir, ['baik', 'rusak_ringan', 'rusak_berat']) ? $kondisiAkhir : 'baik',
+                    ]);
+                }
             }
 
             $peminjaman->update([

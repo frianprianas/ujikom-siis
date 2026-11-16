@@ -128,6 +128,61 @@
                     <span>🏛️</span> <span>Kepala Sekolah (Executive View-Only)</span>
                 </button>
             </div>
+
+            <!-- Expandable: Daftar Lengkap Akun Siswa & Guru Baru -->
+            <div class="mt-3 pt-3 border-t border-emerald-100" x-data="{ openList: false }">
+                <button type="button" @click="openList = !openList" class="w-full text-[11px] font-bold text-emerald-700 hover:text-emerald-900 flex items-center justify-center space-x-1 py-1">
+                    <span x-text="openList ? '▲ Tutup Daftar Akun Siswa & Guru' : '▼ Klik untuk Memilih Akun 5 Siswa & 2 Guru Baru'"></span>
+                </button>
+                <div x-show="openList" x-cloak class="mt-2 space-y-3 text-xs">
+                    <div>
+                        <span class="text-[10px] font-bold uppercase text-slate-400 block mb-1">Daftar Akun Guru:</span>
+                        <div class="grid grid-cols-1 gap-1">
+                            <button type="button" @click="fillDemo('guru@siis.sch.id')" class="p-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-900 text-left font-medium text-xs flex justify-between items-center border border-teal-200 transition">
+                                <span>👨‍🏫 Budi Santoso (Fisika)</span>
+                                <span class="font-mono text-[10px] text-teal-600">guru@siis.sch.id</span>
+                            </button>
+                            <button type="button" @click="fillDemo('ratna.sartika@siis.sch.id')" class="p-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-900 text-left font-medium text-xs flex justify-between items-center border border-teal-200 transition">
+                                <span>👩‍🏫 Dra. Ratna Sartika (Matematika/Lab)</span>
+                                <span class="font-mono text-[10px] text-teal-600">ratna.sartika@siis.sch.id</span>
+                            </button>
+                            <button type="button" @click="fillDemo('hendra.kurnia@siis.sch.id')" class="p-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-900 text-left font-medium text-xs flex justify-between items-center border border-teal-200 transition">
+                                <span>👨‍💻 Hendra Kurnia, S.Kom (RPL)</span>
+                                <span class="font-mono text-[10px] text-teal-600">hendra.kurnia@siis.sch.id</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="text-[10px] font-bold uppercase text-slate-400 block mb-1">Daftar Akun Siswa:</span>
+                        <div class="grid grid-cols-1 gap-1 max-h-48 overflow-y-auto pr-1">
+                            <button type="button" @click="fillDemo('siswa@siis.sch.id')" class="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 text-left font-medium text-xs flex justify-between items-center border border-emerald-200 transition">
+                                <span>👨‍🎓 Ahmad Siswa (XII RPL 1)</span>
+                                <span class="font-mono text-[10px] text-emerald-600">siswa@siis.sch.id</span>
+                            </button>
+                            <button type="button" @click="fillDemo('siti.nurhaliza@siis.sch.id')" class="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 text-left font-medium text-xs flex justify-between items-center border border-emerald-200 transition">
+                                <span>👩‍🎓 Siti Nurhaliza (XII RPL 2)</span>
+                                <span class="font-mono text-[10px] text-emerald-600">siti.nurhaliza@siis.sch.id</span>
+                            </button>
+                            <button type="button" @click="fillDemo('dimas.pratama@siis.sch.id')" class="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 text-left font-medium text-xs flex justify-between items-center border border-emerald-200 transition">
+                                <span>👨‍🎓 Dimas Pratama (XI TKJ 1)</span>
+                                <span class="font-mono text-[10px] text-emerald-600">dimas.pratama@siis.sch.id</span>
+                            </button>
+                            <button type="button" @click="fillDemo('putri.ayu@siis.sch.id')" class="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 text-left font-medium text-xs flex justify-between items-center border border-emerald-200 transition">
+                                <span>👩‍🎓 Putri Ayu Lestari (XI DKV 2)</span>
+                                <span class="font-mono text-[10px] text-emerald-600">putri.ayu@siis.sch.id</span>
+                            </button>
+                            <button type="button" @click="fillDemo('fajar.ramadhan@siis.sch.id')" class="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 text-left font-medium text-xs flex justify-between items-center border border-emerald-200 transition">
+                                <span>👨‍🎓 Fajar Ramadhan (X PPLG 1)</span>
+                                <span class="font-mono text-[10px] text-emerald-600">fajar.ramadhan@siis.sch.id</span>
+                            </button>
+                            <button type="button" @click="fillDemo('rina.amelia@siis.sch.id')" class="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 text-left font-medium text-xs flex justify-between items-center border border-emerald-200 transition">
+                                <span>👩‍🎓 Rina Amelia (XII MM 1)</span>
+                                <span class="font-mono text-[10px] text-emerald-600">rina.amelia@siis.sch.id</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
     </div>

@@ -607,4 +607,88 @@ class SiisCoreTest extends TestCase
         $response->assertJsonCount(10, 'data.units');
         $response->assertJsonPath('data.units.0.kode_unit', 'LPT-ASUS-I5-001');
     }
+
+    /**
+     * Test verifikasi ketersediaan akun 5 siswa dan 2 guru baru beserta kelancaran siklus peminjaman & pengembalian.
+     */
+    public function test_new_students_and_teachers_seeded_and_loan_lifecycle_works(): void
+    {
+        // 1. Verifikasi 5 Siswa Baru
+        $newStudents = [
+            'siti.nurhaliza@siis.sch.id' => 'A2B3C4D5',
+            'dimas.pratama@siis.sch.id' => 'A3B4C5D6',
+            'putri.ayu@siis.sch.id' => 'A4B5C6D7',
+            'fajar.ramadhan@siis.sch.id' => 'A5B6C7D8',
+            'rina.amelia@siis.sch.id' => 'A6B7C8D9',
+        ];
+
+        foreach ($newStudents as $email => $rfid) {
+            $user = User::where('email', $email)->first();
+            $this->assertNotNull($user, "Siswa {$email} harus terdaftar di database.");
+            $this->assertEquals('siswa', $user->role);
+            $this->assertEquals($rfid, $user->rfid_uid);
+            $this->assertNotEmpty($user->nomor_identitas);
+            $this->assertNotEmpty($user->kelas_atau_jabatan);
+        }
+
+        // 2. Verifikasi 2 Guru Baru
+        $newTeachers = [
+            'ratna.sartika@siis.sch.id' => 'D4E5F6A1',
+            'hendra.kurnia@siis.sch.id' => 'B3C4D5E6',
+        ];
+
+        foreach ($newTeachers as $email => $rfid) {
+            $user = User::where('email', $email)->first();
+            $this->assertNotNull($user, "Guru {$email} harus terdaftar di database.");
+            $this->assertEquals('guru', $user->role);
+            $this->assertEquals($rfid, $user->rfid_uid);
+            $this->assertNotEmpty($user->nomor_identitas);
+            $this->assertNotEmpty($user->kelas_atau_jabatan);
+        }
+
+        // 3. Tes Siklus Lengkap: Pengajuan -> Approval -> Serah Terima -> Pengembalian
+        $siswa = User::where('email', 'siti.nurhaliza@siis.sch.id')->first();
+        $staff = User::where('role', 'staff_sarpras')->first();
+        $alat = Alat::where('stok_tersedia', '>=', 2)->first();
+        $initialStock = $alat->stok_tersedia;
+
+        // Step A: Siswa Siti mengajukan peminjaman
+        $this->actingAs($siswa)->post(route('peminjaman.store'), [
+            'tanggal_pinjam' => now()->toDateString(),
+            'tanggal_harus_kembali' => now()->addDays(2)->toDateString(),
+            'keperluan' => 'Praktikum Mandiri Basis Data',
+            'items' => [
+                ['alat_id' => $alat->id, 'jumlah' => 1],
+            ],
+        ])->assertRedirect(route('peminjaman.index'));
+
+        $peminjaman = Peminjaman::where('user_id', $siswa->id)->latest('id')->first();
+        $this->assertNotNull($peminjaman);
+        $this->assertEquals('menunggu_persetujuan', $peminjaman->status);
+
+        // Step B: Staff Sarpras menyetujui peminjaman (Stok berkurang 1)
+        $this->actingAs($staff)->post(route('sarpras.peminjaman.approve', $peminjaman->id), [
+            'catatan_approval' => 'Disetujui untuk kegiatan lab',
+        ])->assertSessionHas('success');
+
+        $peminjaman->refresh();
+        $this->assertEquals('disetujui', $peminjaman->status);
+        $this->assertEquals($initialStock - 1, $alat->fresh()->stok_tersedia);
+
+        // Step C: Staff mengonfirmasi pengambilan alat fisik
+        $this->actingAs($staff)->post(route('sarpras.peminjaman.borrow', $peminjaman->id))
+            ->assertSessionHas('success');
+
+        $peminjaman->refresh();
+        $this->assertEquals('sedang_dipinjam', $peminjaman->status);
+
+        // Step D: Staff memproses pengembalian alat (Stok pulih kembali)
+        $this->actingAs($staff)->post(route('sarpras.peminjaman.return', $peminjaman->id))
+            ->assertSessionHas('success');
+
+        $peminjaman->refresh();
+        $this->assertEquals('dikembalikan', $peminjaman->status);
+        $this->assertNotNull($peminjaman->tanggal_aktual_kembali);
+        $this->assertEquals($initialStock, $alat->fresh()->stok_tersedia);
+    }
 }
