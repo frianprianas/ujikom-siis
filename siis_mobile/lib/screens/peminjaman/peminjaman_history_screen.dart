@@ -87,10 +87,14 @@ class _PeminjamanHistoryScreenState extends State<PeminjamanHistoryScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Peminjaman #${loan.id}',
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF064E3B)),
+                  Expanded(
+                    child: Text(
+                      'Peminjaman #${loan.id}',
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF064E3B)),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
@@ -370,10 +374,14 @@ class _PeminjamanHistoryScreenState extends State<PeminjamanHistoryScreen> {
                                       Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
-                                          Text(
-                                            'Peminjaman #${loan.id}',
-                                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Color(0xFF064E3B)),
+                                          Expanded(
+                                            child: Text(
+                                              'Peminjaman #${loan.id}',
+                                              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Color(0xFF064E3B)),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
                                           ),
+                                          const SizedBox(width: 8),
                                           Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                             decoration: BoxDecoration(
@@ -399,9 +407,13 @@ class _PeminjamanHistoryScreenState extends State<PeminjamanHistoryScreen> {
                                           children: [
                                             const Icon(Icons.person_outline, size: 15, color: Color(0xFF059669)),
                                             const SizedBox(width: 4),
-                                            Text(
-                                              '${loan.user!.nama} (${loan.user!.roleLabel})',
-                                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+                                            Expanded(
+                                              child: Text(
+                                                '${loan.user!.nama} (${loan.user!.roleLabel})',
+                                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+                                                overflow: TextOverflow.ellipsis,
+                                                maxLines: 1,
+                                              ),
                                             ),
                                           ],
                                         ),
@@ -413,9 +425,13 @@ class _PeminjamanHistoryScreenState extends State<PeminjamanHistoryScreen> {
                                         children: [
                                           const Icon(Icons.calendar_today_outlined, size: 14, color: Color(0xFF059669)),
                                           const SizedBox(width: 6),
-                                          Text(
-                                            '${loan.tanggalPinjam} s/d ${loan.tanggalHarusKembali}',
-                                            style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                                          Expanded(
+                                            child: Text(
+                                              '${loan.tanggalPinjam} s/d ${loan.tanggalHarusKembali}',
+                                              style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                                              overflow: TextOverflow.ellipsis,
+                                              maxLines: 1,
+                                            ),
                                           ),
                                         ],
                                       ),
@@ -427,9 +443,13 @@ class _PeminjamanHistoryScreenState extends State<PeminjamanHistoryScreen> {
                                       Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
-                                          Text(
-                                            '${loan.details.length} jenis alat (${loan.totalItemCount} unit)',
-                                            style: const TextStyle(fontSize: 13, color: Color(0xFF064E3B), fontWeight: FontWeight.w600),
+                                          Expanded(
+                                            child: Text(
+                                              '${loan.details.length} jenis alat (${loan.totalItemCount} unit)',
+                                              style: const TextStyle(fontSize: 13, color: Color(0xFF064E3B), fontWeight: FontWeight.w600),
+                                              overflow: TextOverflow.ellipsis,
+                                              maxLines: 1,
+                                            ),
                                           ),
                                           const Icon(Icons.chevron_right, size: 20, color: Color(0xFF059669)),
                                         ],

@@ -251,9 +251,13 @@ class _ApprovalListScreenState extends State<ApprovalListScreen> {
                                 children: [
                                   const Icon(Icons.date_range, size: 16, color: Color(0xFF059669)),
                                   const SizedBox(width: 6),
-                                  Text(
-                                    'Periode: ${loan.tanggalPinjam} s/d ${loan.tanggalHarusKembali}',
-                                    style: const TextStyle(fontSize: 13, color: Color(0xFF334155), fontWeight: FontWeight.w600),
+                                  Expanded(
+                                    child: Text(
+                                      'Periode: ${loan.tanggalPinjam} s/d ${loan.tanggalHarusKembali}',
+                                      style: const TextStyle(fontSize: 13, color: Color(0xFF334155), fontWeight: FontWeight.w600),
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                    ),
                                   ),
                                 ],
                               ),
