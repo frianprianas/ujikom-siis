@@ -123,7 +123,7 @@
             <div>
                 <div class="font-bold text-sm">Keterangan: Barang Sudah Dikembalikan ke Sarpras</div>
                 <div class="text-xs text-emerald-700 mt-0.5">
-                    Seluruh unit alat telah diperiksa dan diterima kembali pada <strong>{{ $peminjaman->tanggal_aktual_kembali?->format('d F Y, H:i') }} WIB</strong>. Stok inventaris telah otomatis dipulihkan ke gudang/rak penyimpanan.
+                    Seluruh unit alat telah diperiksa dan diterima kembali pada <strong>{{ $peminjaman->tanggal_aktual_kembali?->format('d F Y, H:i') }} WIB</strong>. Stok inventaris telah otomatis dipulihkan ke posisi semula pada sistem inventaris.
                 </div>
             </div>
         </div>
@@ -209,6 +209,18 @@
                             <td class="py-3 px-4">
                                 <div class="font-semibold text-slate-900">{{ $d->alat->nama_alat }}</div>
                                 <div class="text-xs font-mono text-slate-400">{{ $d->alat->kode_alat }} | Lokasi: {{ $d->alat->lokasi_penyimpanan ?? '-' }}</div>
+                                @if($d->unitAlat)
+                                    <div class="mt-1.5 inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium">
+                                        <i data-lucide="tag" class="w-3.5 h-3.5 text-emerald-600"></i>
+                                        <span>Unit Spesifik: <strong class="font-mono text-emerald-950 font-bold">{{ $d->unitAlat->kode_unit }}</strong></span>
+                                        @if($d->unitAlat->nomor_seri)
+                                            <span class="text-emerald-700">| SN: {{ $d->unitAlat->nomor_seri }}</span>
+                                        @endif
+                                        @if($d->unitAlat->lokasi_spesifik)
+                                            <span class="text-slate-500 font-normal">({{ $d->unitAlat->lokasi_spesifik }})</span>
+                                        @endif
+                                    </div>
+                                @endif
                             </td>
                             <td class="py-3 px-4 text-xs text-slate-600">
                                 {{ $d->alat->kategori->nama_kategori ?? '-' }}

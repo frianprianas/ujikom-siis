@@ -18,87 +18,80 @@
          // Selected Items / Keranjang Serah Terima
          cart: [],
 
-         // Item Picker State
-         selectedPickerAlatId: '{{ $selectedAlatId ?? '' }}',
-         pickerJumlah: 1,
-
-         init() {
-             if (this.selectedPickerAlatId) {
-                 const found = this.availableAlat.find(a => a.id == this.selectedPickerAlatId);
-                 if (found) {
-                     this.addToCart(found.id, 1);
-                 }
-             }
-         },
+         // Item & Unit Picker State
+         selectedAlatId: '{{ $selectedAlatId ?? '' }}',
+         selectedUnitId: '',
 
          get selectedUser() {
              return this.peminjamList.find(u => u.id == this.selectedUserId) || null;
          },
 
-         get filteredPeminjam() {
-             if (!this.userSearch.trim()) return this.peminjamList;
-             const q = this.userSearch.toLowerCase();
-             return this.peminjamList.filter(u => 
-                 u.nama.toLowerCase().includes(q) || 
-                 (u.nomor_identitas && u.nomor_identitas.toLowerCase().includes(q)) ||
-                 (u.rfid_uid && u.rfid_uid.toLowerCase().includes(q)) ||
-                 (u.kelas_atau_jabatan && u.kelas_atau_jabatan.toLowerCase().includes(q))
-             );
+         get currentAlat() {
+             return this.availableAlat.find(a => a.id == this.selectedAlatId) || null;
          },
 
-         get currentPickerAlat() {
-             return this.availableAlat.find(a => a.id == this.selectedPickerAlatId) || null;
+         get availableUnitsForSelectedAlat() {
+             if (!this.currentAlat || !this.currentAlat.units) return [];
+             // Filter unit yang belum dimasukkan ke keranjang
+             const chosenUnitIds = this.cart.map(c => c.unit_alat_id);
+             return this.currentAlat.units.filter(u => !chosenUnitIds.includes(u.id));
          },
 
-         addToCart(alatId, qty = 1) {
-             const targetId = alatId || this.selectedPickerAlatId;
-             if (!targetId) return;
+         addUnitToCart(unit = null) {
+             const targetUnit = unit || this.availableUnitsForSelectedAlat.find(u => u.id == this.selectedUnitId);
+             if (!targetUnit || !this.currentAlat) return;
 
-             const alat = this.availableAlat.find(a => a.id == targetId);
-             if (!alat) return;
-
-             const existing = this.cart.find(i => i.alat_id == targetId);
-             const maxStock = alat.stok_tersedia;
-
-             if (existing) {
-                 if (existing.jumlah + qty <= maxStock) {
-                     existing.jumlah += qty;
-                 } else {
-                     existing.jumlah = maxStock;
-                     alert(`Batas stok tersedia untuk '${alat.nama_alat}' adalah ${maxStock} unit.`);
-                 }
-             } else {
-                 const amount = Math.min(qty, maxStock);
-                 this.cart.push({
-                     alat_id: alat.id,
-                     nama_alat: alat.nama_alat,
-                     kode_alat: alat.kode_alat,
-                     kategori: alat.kategori ? alat.kategori.nama_kategori : '-',
-                     kondisi: alat.kondisi,
-                     lokasi: alat.lokasi_penyimpanan || 'Gudang Sarpras',
-                     max_stok: maxStock,
-                     jumlah: amount
-                 });
+             // Cek duplikasi
+             if (this.cart.some(c => c.unit_alat_id == targetUnit.id)) {
+                 alert(`Unit ${targetUnit.kode_unit} sudah ada di dalam daftar.`);
+                 return;
              }
 
-             this.selectedPickerAlatId = '';
-             this.pickerJumlah = 1;
+             this.cart.push({
+                 alat_id: this.currentAlat.id,
+                 unit_alat_id: targetUnit.id,
+                 nama_alat: this.currentAlat.nama_alat,
+                 kode_alat: this.currentAlat.kode_alat,
+                 kategori: this.currentAlat.kategori ? this.currentAlat.kategori.nama_kategori : '-',
+                 kode_unit: targetUnit.kode_unit,
+                 nomor_seri: targetUnit.nomor_seri || '-',
+                 kondisi: targetUnit.kondisi,
+                 lokasi: targetUnit.lokasi_spesifik || this.currentAlat.lokasi_penyimpanan || 'Ruang Sarpras',
+                 catatan: targetUnit.catatan || ''
+             });
+
+             this.selectedUnitId = '';
+         },
+
+         addGenericAlatToCart() {
+             if (!this.currentAlat) return;
+             // Jika alat memiliki unit fisik, ambil unit pertama yang tersedia
+             if (this.availableUnitsForSelectedAlat.length > 0) {
+                 this.addUnitToCart(this.availableUnitsForSelectedAlat[0]);
+                 return;
+             }
+
+             // Fallback jika alat tidak memiliki unit fisik
+             this.cart.push({
+                 alat_id: this.currentAlat.id,
+                 unit_alat_id: null,
+                 nama_alat: this.currentAlat.nama_alat,
+                 kode_alat: this.currentAlat.kode_alat,
+                 kategori: this.currentAlat.kategori ? this.currentAlat.kategori.nama_kategori : '-',
+                 kode_unit: this.currentAlat.kode_alat + ' (Standar)',
+                 nomor_seri: '-',
+                 kondisi: this.currentAlat.kondisi,
+                 lokasi: this.currentAlat.lokasi_penyimpanan || 'Ruang Sarpras',
+                 catatan: ''
+             });
          },
 
          removeFromCart(index) {
              this.cart.splice(index, 1);
          },
 
-         updateQty(index, delta) {
-             const item = this.cart[index];
-             const newQty = item.jumlah + delta;
-             if (newQty >= 1 && newQty <= item.max_stok) {
-                 item.jumlah = newQty;
-             }
-         },
-
          get totalUnitAlat() {
-             return this.cart.reduce((sum, item) => sum + parseInt(item.jumlah || 0), 0);
+             return this.cart.length;
          },
 
          get isFormValid() {
@@ -120,7 +113,7 @@
             </span>
             <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">Pelayanan Peminjaman Langsung</h1>
             <p class="text-sm text-teal-100/80 mt-1 max-w-xl">
-                Catat data peminjam yang datang langsung ke ruang Sarpras, pilih alat yang dibutuhkan, dan serahkan fisik barang seketika.
+                Catat data peminjam di tempat, pilih kode spesifik unit alat fisik yang diserahkan, dan proses pinjam langsung.
             </p>
         </div>
         <div class="relative z-10 shrink-0">
@@ -136,7 +129,7 @@
     <form method="POST" action="{{ route('sarpras.peminjaman.direct.store') }}" class="space-y-6">
         @csrf
 
-        <!-- 1. Pemilihan Peminjam (Siswa / Guru yang datang tatap muka) -->
+        <!-- 1. Pemilihan Peminjam (Siswa / Guru di Meja Layanan) -->
         <div class="bg-white/95 backdrop-blur-md rounded-3xl shadow-sm border border-emerald-100 p-6 space-y-4">
             <div class="flex items-center justify-between border-b border-emerald-50 pb-3">
                 <h2 class="text-sm font-bold text-emerald-950 flex items-center space-x-2">
@@ -165,7 +158,7 @@
                             </template>
                         </optgroup>
                     </select>
-                    <span class="text-[11px] text-slate-400 mt-1 block">Pilih nama siswa atau guru yang sedang berdiri di hadapan Anda.</span>
+                    <span class="text-[11px] text-slate-400 mt-1 block">Pilih nama siswa atau guru yang sedang dilayani di meja Sarpras.</span>
                 </div>
 
                 <!-- Preview Kartu Identitas Peminjam -->
@@ -189,22 +182,25 @@
             </div>
         </div>
 
-        <!-- 2. Pemilihan Alat & Jumlah Unit -->
+        <!-- 2. Pemilihan Alat & Kode Unit Fisik Spesifik -->
         <div class="bg-white/95 backdrop-blur-md rounded-3xl shadow-sm border border-emerald-100 p-6 space-y-4">
             <div class="flex items-center justify-between border-b border-emerald-50 pb-3">
                 <h2 class="text-sm font-bold text-emerald-950 flex items-center space-x-2">
                     <span class="w-6 h-6 rounded-lg bg-teal-100 text-teal-800 flex items-center justify-center text-xs font-black">2</span>
-                    <span>Pilih Alat Inventaris yang Diserahkan Fisik</span>
+                    <span>Pilih Alat & Kode Spesifik Unit Fisik yang Diserahkan</span>
                 </h2>
-                <span class="text-xs text-slate-500 font-medium">Stok akan langsung dipotong</span>
+                <span class="text-xs text-teal-700 font-semibold bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-full">Unit Level Tracking</span>
             </div>
 
-            <!-- Picker Bar -->
-            <div class="p-4 rounded-2xl bg-emerald-50/40 border border-emerald-100 space-y-3">
+            <!-- Langkah Pemilihan: Pilih Alat Terlebih Dahulu, lalu Pilih Kode Unit Fisiknya -->
+            <div class="p-4 rounded-2xl bg-emerald-50/40 border border-emerald-100 space-y-4">
                 <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
-                    <div class="sm:col-span-8">
-                        <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Pilih Alat Tersedia di Gudang</label>
-                        <select x-model="selectedPickerAlatId" class="w-full text-sm rounded-xl border border-slate-300 p-2.5 bg-white">
+                    <!-- Dropdown Model Alat -->
+                    <div class="sm:col-span-6">
+                        <label class="block text-xs font-bold uppercase text-slate-700 mb-1">
+                            A. Pilih Nama / Model Alat
+                        </label>
+                        <select x-model="selectedAlatId" @change="selectedUnitId = ''" class="w-full text-sm rounded-xl border border-slate-300 p-2.5 bg-white">
                             <option value="">-- Pilih Alat Tersedia --</option>
                             <template x-for="a in availableAlat" :key="a.id">
                                 <option :value="a.id" x-text="`${a.nama_alat} [${a.kode_alat}] - Tersedia: ${a.stok_tersedia} unit`"></option>
@@ -212,63 +208,90 @@
                         </select>
                     </div>
 
-                    <div class="sm:col-span-2">
-                        <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Jumlah</label>
-                        <input type="number" x-model.number="pickerJumlah" min="1" :max="currentPickerAlat ? currentPickerAlat.stok_tersedia : 1"
-                               class="w-full text-sm rounded-xl border border-slate-300 p-2.5 bg-white text-center font-bold">
+                    <!-- Dropdown Unit Fisik Spesifik -->
+                    <div class="sm:col-span-4">
+                        <label class="block text-xs font-bold uppercase text-teal-900 mb-1">
+                            B. Kode Spesifik Unit Fisik
+                        </label>
+                        <select x-model="selectedUnitId" :disabled="!currentAlat || availableUnitsForSelectedAlat.length === 0"
+                                class="w-full text-sm rounded-xl border border-teal-300 p-2.5 bg-white font-mono disabled:opacity-40">
+                            <option value="">-- Pilih Kode Unit Fisik --</option>
+                            <template x-for="u in availableUnitsForSelectedAlat" :key="u.id">
+                                <option :value="u.id" x-text="`${u.kode_unit} (${u.nomor_seri ? u.nomor_seri + ' - ' : ''}Kondisi: ${u.kondisi})`"></option>
+                            </template>
+                        </select>
                     </div>
 
+                    <!-- Tombol Tambahkan Unit -->
                     <div class="sm:col-span-2">
-                        <button type="button" @click="addToCart()" :disabled="!selectedPickerAlatId"
+                        <button type="button" @click="addUnitToCart()" :disabled="!selectedUnitId && availableUnitsForSelectedAlat.length > 0"
                                 class="w-full p-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 disabled:opacity-40 text-white font-bold text-xs shadow-sm transition">
-                            + Masukkan
+                            + Serahkan Unit
                         </button>
+                    </div>
+                </div>
+
+                <!-- Info Cepat Pilihan Unit Fisik -->
+                <div x-show="currentAlat && availableUnitsForSelectedAlat.length > 0" class="pt-2 border-t border-emerald-100">
+                    <span class="text-[11px] font-bold text-slate-600 uppercase block mb-1.5">Pilihan Cepat Unit Fisik Tersedia (Klik untuk Menyerahkan):</span>
+                    <div class="flex flex-wrap gap-1.5">
+                        <template x-for="u in availableUnitsForSelectedAlat" :key="u.id">
+                            <button type="button" @click="addUnitToCart(u)"
+                                    class="px-2.5 py-1.5 rounded-xl bg-white hover:bg-teal-50 border border-teal-200 hover:border-teal-400 text-xs font-mono text-teal-900 flex items-center space-x-1.5 shadow-2xs transition">
+                                <i data-lucide="tag" class="w-3 h-3 text-teal-600"></i>
+                                <span class="font-bold" x-text="u.kode_unit"></span>
+                                <span class="text-[10px] text-slate-500" x-text="u.lokasi_spesifik ? '• ' + u.lokasi_spesifik : ''"></span>
+                            </button>
+                        </template>
                     </div>
                 </div>
             </div>
 
-            <!-- Keranjang Alat -->
+            <!-- Daftar Unit yang Diserahkan (Keranjang Serah Terima) -->
             <div class="space-y-2">
+                <span class="text-xs font-bold text-slate-700 uppercase tracking-wider block">Daftar Fisik Barang yang Diserahkan ke Peminjam:</span>
+                
                 <div x-show="cart.length === 0" class="py-8 text-center border-2 border-dashed border-emerald-200 rounded-2xl p-6 text-slate-400 bg-white/40">
-                    <i data-lucide="package-search" class="w-8 h-8 mx-auto text-emerald-300 mb-2"></i>
-                    <p class="text-xs font-semibold text-slate-700">Belum ada alat yang dimasukkan ke daftar serah terima</p>
-                    <p class="text-[11px] text-slate-400 mt-0.5">Pilih alat dari menu di atas lalu klik tombol "+ Masukkan".</p>
+                    <i data-lucide="tag" class="w-8 h-8 mx-auto text-teal-300 mb-2"></i>
+                    <p class="text-xs font-semibold text-slate-700">Belum ada unit fisik yang dimasukkan</p>
+                    <p class="text-[11px] text-slate-400 mt-0.5">Pilih nama alat dan kode unit fisik di atas untuk menambahkan ke daftar serah terima.</p>
                 </div>
 
                 <template x-for="(item, index) in cart" :key="index">
-                    <div class="p-3.5 rounded-2xl border border-emerald-100 bg-white flex items-center justify-between gap-4 shadow-sm">
-                        <div class="flex items-center space-x-3">
-                            <span class="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center justify-center font-bold text-xs" x-text="index + 1"></span>
+                    <div class="p-3.5 rounded-2xl border border-teal-200 bg-teal-50/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                        <div class="flex items-start sm:items-center space-x-3">
+                            <span class="w-6 h-6 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold text-xs shrink-0" x-text="index + 1"></span>
                             <div>
-                                <h4 class="font-bold text-slate-900 text-xs sm:text-sm" x-text="item.nama_alat"></h4>
-                                <div class="text-[11px] text-slate-500 font-mono">
-                                    <span class="text-emerald-700 font-semibold" x-text="item.kode_alat"></span>
-                                    <span>• Lokasi: <span x-text="item.lokasi"></span></span>
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <h4 class="font-bold text-slate-900 text-sm" x-text="item.nama_alat"></h4>
+                                    <!-- Badge Kode Unit Spesifik -->
+                                    <span class="px-2 py-0.5 rounded-lg bg-teal-100 text-teal-900 border border-teal-300 font-mono text-xs font-extrabold flex items-center gap-1">
+                                        <i data-lucide="barcode" class="w-3.5 h-3.5 text-teal-700"></i>
+                                        <span x-text="'Kode Unit: ' + item.kode_unit"></span>
+                                    </span>
+                                </div>
+                                <div class="text-xs text-slate-500 font-mono mt-1 flex flex-wrap items-center gap-2">
+                                    <span x-text="'Model: ' + item.kode_alat"></span>
+                                    <span>•</span>
+                                    <span x-text="'SN: ' + item.nomor_seri"></span>
+                                    <span>•</span>
+                                    <span x-text="'Kondisi: ' + item.kondisi.toUpperCase()"></span>
+                                    <span x-show="item.lokasi">•</span>
+                                    <span x-show="item.lokasi" x-text="'Lokasi: ' + item.lokasi"></span>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="flex items-center space-x-3">
-                            <div class="flex items-center border border-emerald-200 rounded-xl overflow-hidden bg-emerald-50/40">
-                                <button type="button" @click="updateQty(index, -1)" :disabled="item.jumlah <= 1"
-                                        class="px-2.5 py-1 text-slate-600 hover:text-emerald-800 disabled:opacity-30">
-                                    -
-                                </button>
-                                <span class="w-8 text-center font-bold text-xs text-emerald-950" x-text="item.jumlah"></span>
-                                <button type="button" @click="updateQty(index, 1)" :disabled="item.jumlah >= item.max_stok"
-                                        class="px-2.5 py-1 text-slate-600 hover:text-emerald-800 disabled:opacity-30">
-                                    +
-                                </button>
-                            </div>
-                            <span class="text-xs text-slate-500">unit</span>
-
-                            <button type="button" @click="removeFromCart(index)" class="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition">
+                        <div class="flex items-center space-x-2 self-end sm:self-center">
+                            <span class="text-xs font-bold text-teal-800 bg-teal-100 px-2 py-1 rounded-lg">1 Unit Fisik</span>
+                            <button type="button" @click="removeFromCart(index)" class="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition" title="Hapus dari daftar">
                                 <i data-lucide="trash-2" class="w-4 h-4"></i>
                             </button>
 
                             <!-- Hidden inputs for form submission -->
                             <input type="hidden" :name="`items[${index}][alat_id]`" :value="item.alat_id">
-                            <input type="hidden" :name="`items[${index}][jumlah]`" :value="item.jumlah">
+                            <input type="hidden" :name="`items[${index}][unit_alat_id]`" :value="item.unit_alat_id">
+                            <input type="hidden" :name="`items[${index}][jumlah]`" value="1">
                         </div>
                     </div>
                 </template>
@@ -310,8 +333,7 @@
             <div>
                 <span class="text-xs font-semibold text-teal-300 uppercase tracking-wider block">Ringkasan Serah Terima</span>
                 <div class="text-sm text-slate-300 mt-1">
-                    Total: <strong class="text-white" x-text="cart.length"></strong> jenis alat |
-                    <strong class="text-emerald-400" x-text="totalUnitAlat"></strong> unit fisik diserahkan.
+                    Total: <strong class="text-emerald-400 font-extrabold text-base" x-text="totalUnitAlat"></strong> unit fisik spesifik diserahkan langsung.
                 </div>
             </div>
 

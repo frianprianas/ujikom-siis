@@ -21,7 +21,7 @@ class ApprovalController extends Controller
     {
         $status = $request->query('status');
 
-        $query = Peminjaman::with(['user', 'approvedBy', 'details.alat'])
+        $query = Peminjaman::with(['user', 'approvedBy', 'details.alat', 'details.unitAlat'])
             ->latest('tanggal_pengajuan');
 
         if ($status) {
@@ -214,7 +214,10 @@ class ApprovalController extends Controller
             ->orderBy('nama')
             ->get();
 
-        $alatTersedia = Alat::with('kategori')
+        // Ambil alat beserta unit-unit fisik spesifik yang berstatus 'tersedia'
+        $alatTersedia = Alat::with(['kategori', 'units' => function ($q) {
+                $q->where('status', 'tersedia')->where('kondisi', '!=', 'rusak_berat')->orderBy('kode_unit');
+            }])
             ->where('stok_tersedia', '>', 0)
             ->orderBy('nama_alat')
             ->get();
@@ -223,7 +226,7 @@ class ApprovalController extends Controller
     }
 
     /**
-     * Simpan peminjaman langsung di meja Sarpras (status otomatis 'sedang_dipinjam' & serah terima fisik saat itu juga).
+     * Simpan peminjaman langsung di meja Sarpras dengan kode unit spesifik.
      */
     public function storeDirectLoan(Request $request): RedirectResponse
     {
@@ -234,25 +237,33 @@ class ApprovalController extends Controller
             'keperluan' => ['nullable', 'string', 'max:500'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.alat_id' => ['required', 'integer', 'exists:alat,id'],
+            'items.*.unit_alat_id' => ['nullable', 'integer', 'exists:unit_alat,id'],
             'items.*.jumlah' => ['required', 'integer', 'min:1'],
         ], [
             'user_id.required' => 'Pilih siswa atau guru peminjam yang datang ke Sarpras.',
-            'items.min' => 'Pilih minimal 1 item alat yang diserahkan.',
+            'items.min' => 'Pilih minimal 1 item alat / unit fisik yang diserahkan.',
             'tanggal_harus_kembali.after_or_equal' => 'Tanggal batas kembali tidak boleh sebelum tanggal pinjam.',
         ]);
 
         $peminjam = User::findOrFail($validated['user_id']);
 
         return DB::transaction(function () use ($validated, $peminjam) {
-            // 1. Verifikasi stok tersedia
+            // 1. Verifikasi stok dan ketersediaan unit fisik
             foreach ($validated['items'] as $item) {
-                $alat = Alat::findOrFail($item['alat_id']);
-                if ($alat->stok_tersedia < $item['jumlah']) {
-                    return back()->withInput()->with('error', "Stok untuk alat '{$alat->nama_alat}' tidak mencukupi (Tersedia: {$alat->stok_tersedia} unit).");
+                if (!empty($item['unit_alat_id'])) {
+                    $unit = \App\Models\UnitAlat::findOrFail($item['unit_alat_id']);
+                    if ($unit->status !== 'tersedia') {
+                        return back()->withInput()->with('error', "Unit fisik '{$unit->kode_unit}' sedang tidak tersedia.");
+                    }
+                } else {
+                    $alat = Alat::findOrFail($item['alat_id']);
+                    if ($alat->stok_tersedia < $item['jumlah']) {
+                        return back()->withInput()->with('error', "Stok untuk alat '{$alat->nama_alat}' tidak mencukupi (Tersedia: {$alat->stok_tersedia} unit).");
+                    }
                 }
             }
 
-            // 2. Buat Peminjaman dengan status LANGSUNG 'sedang_dipinjam' (serah terima langsung)
+            // 2. Buat Peminjaman dengan status LANGSUNG 'sedang_dipinjam'
             $peminjaman = Peminjaman::create([
                 'user_id' => $peminjam->id,
                 'tanggal_pengajuan' => now(),
@@ -264,31 +275,42 @@ class ApprovalController extends Controller
                 'catatan_approval' => 'Layanan Tatap Muka Meja Sarpras' . (!empty($validated['keperluan']) ? " | Keperluan: {$validated['keperluan']}" : ''),
             ]);
 
-            // 3. Buat Detail Peminjaman & potong stok langsung
+            // 3. Buat Detail Peminjaman per unit fisik spesifik & potong stok
+            $unitCodes = [];
             foreach ($validated['items'] as $item) {
                 $alat = Alat::findOrFail($item['alat_id']);
-
-                // Hubungkan ke unit fisik jika ada
-                $availableUnit = $alat->units()->where('status', 'tersedia')->first();
                 $unitAlatId = null;
-                if ($availableUnit) {
-                    $unitAlatId = $availableUnit->id;
-                    $availableUnit->update(['status' => 'dipinjam']);
+
+                if (!empty($item['unit_alat_id'])) {
+                    $unit = \App\Models\UnitAlat::findOrFail($item['unit_alat_id']);
+                    $unitAlatId = $unit->id;
+                    $unit->update(['status' => 'dipinjam']);
+                    $unitCodes[] = $unit->kode_unit;
+                } else {
+                    // Cari unit fisik pertama yang tersedia
+                    $availableUnit = $alat->units()->where('status', 'tersedia')->first();
+                    if ($availableUnit) {
+                        $unitAlatId = $availableUnit->id;
+                        $availableUnit->update(['status' => 'dipinjam']);
+                        $unitCodes[] = $availableUnit->kode_unit;
+                    }
                 }
 
                 DetailPeminjaman::create([
                     'peminjaman_id' => $peminjaman->id,
                     'alat_id' => $alat->id,
                     'unit_alat_id' => $unitAlatId,
-                    'jumlah' => $item['jumlah'],
+                    'jumlah' => $item['jumlah'] ?? 1,
                     'kondisi_saat_pinjam' => in_array($alat->kondisi, ['baik', 'rusak_ringan']) ? $alat->kondisi : 'baik',
                 ]);
 
-                $alat->decrement('stok_tersedia', $item['jumlah']);
+                $alat->decrement('stok_tersedia', $item['jumlah'] ?? 1);
             }
 
+            $unitText = count($unitCodes) > 0 ? ' [Unit: ' . implode(', ', $unitCodes) . ']' : '';
+
             return redirect()->route('sarpras.dashboard')
-                ->with('success', "Peminjaman langsung #{$peminjaman->id} berhasil dicatat. Barang fisik telah diserahkan di tempat kepada {$peminjam->nama} ({$peminjam->role}).");
+                ->with('success', "Peminjaman langsung #{$peminjaman->id} berhasil dicatat. Barang fisik{$unitText} telah diserahkan di tempat kepada {$peminjam->nama}.");
         });
     }
 

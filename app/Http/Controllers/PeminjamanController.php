@@ -24,7 +24,7 @@ class PeminjamanController extends Controller
         $user = Auth::user();
         $status = $request->query('status');
 
-        $query = Peminjaman::with(['user', 'approvedBy', 'details.alat'])
+        $query = Peminjaman::with(['user', 'approvedBy', 'details.alat', 'details.unitAlat'])
             ->latest('tanggal_pengajuan');
 
         // Filter kepemilikan berdasarkan role pengguna
@@ -116,7 +116,7 @@ class PeminjamanController extends Controller
             abort(403, 'Anda tidak berhak melihat data peminjaman ini.');
         }
 
-        $peminjaman->load(['user', 'approvedBy', 'details.alat.kategori']);
+        $peminjaman->load(['user', 'approvedBy', 'details.alat.kategori', 'details.unitAlat']);
 
         return view('peminjaman.show', compact('peminjaman'));
     }

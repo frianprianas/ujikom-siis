@@ -92,10 +92,17 @@
                             <td class="px-6 py-4">
                                 <ul class="space-y-1">
                                     @foreach($item->details as $d)
-                                        <li class="text-slate-800 font-medium flex items-center space-x-1.5">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                            <span class="text-xs">{{ $d->alat->nama_alat ?? 'Alat Dihapus' }}</span>
-                                            <span class="text-[11px] bg-emerald-50 text-emerald-800 border border-emerald-200 px-1.5 py-0.2 rounded font-bold">{{ $d->jumlah }} unit</span>
+                                        <li class="text-slate-800 font-medium">
+                                            <div class="flex items-center space-x-1.5">
+                                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                                <span class="text-xs">{{ $d->alat->nama_alat ?? 'Alat Dihapus' }}</span>
+                                                <span class="text-[11px] bg-emerald-50 text-emerald-800 border border-emerald-200 px-1.5 py-0.2 rounded font-bold">{{ $d->jumlah }} unit</span>
+                                            </div>
+                                            @if($d->unitAlat)
+                                                <div class="text-[11px] font-mono text-emerald-700 pl-3">
+                                                    Unit: <strong>{{ $d->unitAlat->kode_unit }}</strong>
+                                                </div>
+                                            @endif
                                         </li>
                                     @endforeach
                                 </ul>

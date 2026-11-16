@@ -116,11 +116,21 @@
                                 <div class="text-[11px] font-mono text-emerald-800/70 mt-0.5">RFID: {{ $p->user->rfid_uid ?? 'Belum ada kartu' }}</div>
                             </td>
                             <td class="px-6 py-4">
-                                <ul class="space-y-1">
+                                <ul class="space-y-1.5">
                                     @foreach($p->details as $d)
                                         <li class="text-slate-800 text-xs font-medium">
-                                            {{ $d->alat->nama_alat ?? 'Alat Dihapus' }}
-                                            <span class="bg-emerald-50 text-emerald-800 border border-emerald-200 px-1.5 py-0.2 rounded font-bold">{{ $d->jumlah }} unit</span>
+                                            <div class="font-bold text-slate-900">{{ $d->alat->nama_alat ?? 'Alat Dihapus' }}</div>
+                                            @if($d->unitAlat)
+                                                <div class="inline-flex items-center gap-1 mt-0.5 px-2 py-0.5 rounded-lg bg-teal-50 text-teal-800 border border-teal-200 font-mono text-[11px] font-bold">
+                                                    <i data-lucide="tag" class="w-3 h-3 text-teal-600"></i>
+                                                    <span>Unit: {{ $d->unitAlat->kode_unit }}</span>
+                                                    @if($d->unitAlat->nomor_seri)
+                                                        <span class="text-teal-600 font-normal">({{ $d->unitAlat->nomor_seri }})</span>
+                                                    @endif
+                                                </div>
+                                            @else
+                                                <span class="bg-emerald-50 text-emerald-800 border border-emerald-200 px-1.5 py-0.2 rounded font-bold">{{ $d->jumlah }} unit</span>
+                                            @endif
                                         </li>
                                     @endforeach
                                 </ul>
@@ -250,7 +260,7 @@
                 <i data-lucide="archive" class="w-5 h-5 text-emerald-600"></i>
                 Konfirmasi Pengembalian Alat
             </h3>
-            <p class="text-xs text-slate-500">Stok inventaris akan dikembalikan ke posisi semula di gudang/rak penyimpanan.</p>
+            <p class="text-xs text-slate-500">Stok inventaris akan dipulihkan ke posisi semula pada sistem inventaris.</p>
             <form :action="actionUrl" method="POST" class="space-y-4">
                 @csrf
                 <p class="text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 p-3 rounded-2xl">

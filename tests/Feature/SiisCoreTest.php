@@ -700,6 +700,7 @@ class SiisCoreTest extends TestCase
         $staff = User::where('role', 'staff_sarpras')->first();
         $siswa = User::where('email', 'dimas.pratama@siis.sch.id')->first();
         $alat = Alat::where('stok_tersedia', '>=', 1)->first();
+        $unit = $alat->units()->where('status', 'tersedia')->first();
         $initialStock = $alat->stok_tersedia;
 
         // 1. Tampilkan form peminjaman langsung
@@ -707,14 +708,14 @@ class SiisCoreTest extends TestCase
             ->assertStatus(200)
             ->assertSee('Pelayanan Peminjaman Langsung');
 
-        // 2. Input peminjaman tatap muka langsung serah terima
+        // 2. Input peminjaman tatap muka langsung serah terima dengan kode unit spesifik
         $response = $this->actingAs($staff)->post(route('sarpras.peminjaman.direct.store'), [
             'user_id' => $siswa->id,
             'tanggal_pinjam' => now()->toDateString(),
             'tanggal_harus_kembali' => now()->addDays(1)->toDateString(),
             'keperluan' => 'Praktikum jaringan tatap muka',
             'items' => [
-                ['alat_id' => $alat->id, 'jumlah' => 1],
+                ['alat_id' => $alat->id, 'unit_alat_id' => $unit?->id, 'jumlah' => 1],
             ],
         ]);
 
@@ -727,6 +728,10 @@ class SiisCoreTest extends TestCase
         $this->assertEquals('sedang_dipinjam', $directLoan->status);
         $this->assertEquals($staff->id, $directLoan->approved_by_id);
         $this->assertEquals($initialStock - 1, $alat->fresh()->stok_tersedia);
+        if ($unit) {
+            $this->assertEquals('dipinjam', $unit->fresh()->status);
+            $this->assertEquals($unit->id, $directLoan->details->first()->unit_alat_id);
+        }
 
         // Verifikasi pengembalian dari peminjaman langsung
         $this->actingAs($staff)->post(route('sarpras.peminjaman.return', $directLoan->id))
@@ -735,5 +740,8 @@ class SiisCoreTest extends TestCase
         $directLoan->refresh();
         $this->assertEquals('dikembalikan', $directLoan->status);
         $this->assertEquals($initialStock, $alat->fresh()->stok_tersedia);
+        if ($unit) {
+            $this->assertEquals('tersedia', $unit->fresh()->status);
+        }
     }
 }

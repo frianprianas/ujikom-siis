@@ -297,6 +297,7 @@ class DatabaseSeeder extends Seeder
 
             // Kasus 2: Disetujui / Siap Diambil di Sarpras (Guru Ratna pinjam Mikroskop)
             if ($guruRatna && $mikroskop && $staff) {
+                $unitMikroskop = $mikroskop->units()->where('status', 'tersedia')->first();
                 $p2 = Peminjaman::create([
                     'user_id' => $guruRatna->id,
                     'tanggal_pengajuan' => now()->subHours(5),
@@ -309,14 +310,19 @@ class DatabaseSeeder extends Seeder
                 ]);
                 $p2->details()->create([
                     'alat_id' => $mikroskop->id,
-                    'jumlah' => 2,
+                    'unit_alat_id' => $unitMikroskop?->id,
+                    'jumlah' => 1,
                     'kondisi_saat_pinjam' => 'baik',
                 ]);
-                $mikroskop->decrement('stok_tersedia', 2);
+                $mikroskop->decrement('stok_tersedia', 1);
             }
 
             // Kasus 3: Sedang Dipinjam / Barang di Tangan Peminjam (Siswa Siti pinjam Pointer)
             if ($siswaSiti && $pointer && $staff) {
+                $unitPointer = $pointer->units()->where('status', 'tersedia')->first();
+                if ($unitPointer) {
+                    $unitPointer->update(['status' => 'dipinjam']);
+                }
                 $p3 = Peminjaman::create([
                     'user_id' => $siswaSiti->id,
                     'tanggal_pengajuan' => now()->subDay(),
@@ -325,10 +331,11 @@ class DatabaseSeeder extends Seeder
                     'status' => 'sedang_dipinjam',
                     'approved_by_id' => $staff->id,
                     'tanggal_approval' => now()->subDay(),
-                    'catatan_approval' => 'Keperluan: Presentasi sidang proposal kejuruan RPL',
+                    'catatan_approval' => 'Keperluan: Presentasi sidang proposal kejuruan RPL (Diserahkan langsung di Sarpras)',
                 ]);
                 $p3->details()->create([
                     'alat_id' => $pointer->id,
+                    'unit_alat_id' => $unitPointer?->id,
                     'jumlah' => 1,
                     'kondisi_saat_pinjam' => 'baik',
                 ]);
@@ -337,6 +344,7 @@ class DatabaseSeeder extends Seeder
 
             // Kasus 4: Sudah Selesai Dikembalikan (Guru Budi pinjam Laptop Asus)
             if ($guruBudi && $laptop && $staff) {
+                $unitLaptop = $laptop->units()->first();
                 $p4 = Peminjaman::create([
                     'user_id' => $guruBudi->id,
                     'tanggal_pengajuan' => now()->subDays(3),
@@ -350,6 +358,7 @@ class DatabaseSeeder extends Seeder
                 ]);
                 $p4->details()->create([
                     'alat_id' => $laptop->id,
+                    'unit_alat_id' => $unitLaptop?->id,
                     'jumlah' => 1,
                     'kondisi_saat_pinjam' => 'baik',
                     'kondisi_saat_kembali' => 'baik',
@@ -358,6 +367,10 @@ class DatabaseSeeder extends Seeder
 
             // Kasus 5: Terlambat Mengembalikan (Siswa Dimas pinjam Bola Basket)
             if ($siswaDimas && $bola && $staff) {
+                $unitBola = $bola->units()->where('status', 'tersedia')->first();
+                if ($unitBola) {
+                    $unitBola->update(['status' => 'dipinjam']);
+                }
                 $p5 = Peminjaman::create([
                     'user_id' => $siswaDimas->id,
                     'tanggal_pengajuan' => now()->subDays(5),
@@ -370,10 +383,11 @@ class DatabaseSeeder extends Seeder
                 ]);
                 $p5->details()->create([
                     'alat_id' => $bola->id,
-                    'jumlah' => 2,
+                    'unit_alat_id' => $unitBola?->id,
+                    'jumlah' => 1,
                     'kondisi_saat_pinjam' => 'baik',
                 ]);
-                $bola->decrement('stok_tersedia', 2);
+                $bola->decrement('stok_tersedia', 1);
             }
         }
     }
