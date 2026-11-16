@@ -151,9 +151,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         color: Color(0xFF64748B),
                       ),
                     ),
-                        color: Color(0xFF047857),
-                      ),
-                    ),
                     const SizedBox(height: 32),
 
                     // Login Card
