@@ -788,9 +788,13 @@ class _KatalogScreenState extends State<KatalogScreen> {
                                                   ),
                                                 ),
                                                 const SizedBox(width: 6),
-                                                Text(
-                                                  alat.kategori?.namaKategori ?? '',
-                                                  style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                                                Expanded(
+                                                  child: Text(
+                                                    alat.kategori?.namaKategori ?? '',
+                                                    style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                                                    overflow: TextOverflow.ellipsis,
+                                                    maxLines: 1,
+                                                  ),
                                                 ),
                                               ],
                                             ),

@@ -184,31 +184,35 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
-        notchMargin: 8,
+        notchMargin: 6,
         elevation: 8,
         color: Colors.white,
         padding: EdgeInsets.zero,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            // Left tabs
-            ...List.generate(
-              (navItems.length / 2).ceil(),
-              (i) => _navButton(i, navItems[i]),
-            ),
+        child: SafeArea(
+          child: SizedBox(
+            height: 64,
+            child: Row(
+              children: [
+                // Left tabs
+                ...List.generate(
+                  (navItems.length / 2).ceil(),
+                  (i) => Expanded(child: _navButton(i, navItems[i])),
+                ),
 
-            // Notch space for center FAB
-            const SizedBox(width: 44),
+                // Notch space for center FAB
+                const SizedBox(width: 48),
 
-            // Right tabs
-            ...List.generate(
-              navItems.length - (navItems.length / 2).ceil(),
-              (i) {
-                final realIndex = (navItems.length / 2).ceil() + i;
-                return _navButton(realIndex, navItems[realIndex]);
-              },
+                // Right tabs
+                ...List.generate(
+                  navItems.length - (navItems.length / 2).ceil(),
+                  (i) {
+                    final realIndex = (navItems.length / 2).ceil() + i;
+                    return Expanded(child: _navButton(realIndex, navItems[realIndex]));
+                  },
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -222,16 +226,20 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       onTap: () => setState(() => _currentIndex = index),
       borderRadius: BorderRadius.circular(12),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
             isSelected ? (item.activeIcon) : (item.icon),
-            const SizedBox(height: 3),
+            const SizedBox(height: 2),
             Text(
               item.label ?? '',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 10,
                 fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
                 color: color,
               ),
