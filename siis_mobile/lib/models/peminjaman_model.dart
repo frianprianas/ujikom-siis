@@ -125,6 +125,9 @@ class PeminjamanModel {
       case 'disetujui':
         return 'Disetujui (Siap Diambil)';
       case 'ditolak':
+        if (catatanApproval != null && catatanApproval!.contains('Batal Otomatis')) {
+          return 'Batal Otomatis (1 Jam)';
+        }
         return 'Ditolak';
       case 'sedang_dipinjam':
         return 'Sedang Dipinjam';

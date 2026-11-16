@@ -21,6 +21,8 @@ class PeminjamanController extends Controller
      */
     public function index(Request $request): View
     {
+        Peminjaman::cancelExpiredPendingLoans();
+
         $user = Auth::user();
         $status = $request->query('status');
 

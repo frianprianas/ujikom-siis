@@ -205,6 +205,40 @@ class _KatalogScreenState extends State<KatalogScreen> {
                                 ),
                               ),
                             ),
+                            const SizedBox(width: 6),
+                            if (auth.isPeminjam)
+                              if (u.status == 'tersedia')
+                                ElevatedButton(
+                                  onPressed: () {
+                                    peminjaman.addToCart(alat, unitAlat: u, jumlah: 1);
+                                    Navigator.pop(ctx);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Unit ${u.kodeUnit} (${alat.namaAlat}) ditambahkan ke pesanan.'),
+                                        backgroundColor: const Color(0xFF059669),
+                                        behavior: SnackBarBehavior.floating,
+                                      ),
+                                    );
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF059669),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                  child: const Text('Pesan Unit', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                                )
+                              else
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF1F5F9),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Text('Dipinjam', style: TextStyle(fontSize: 10, color: Color(0xFF64748B), fontWeight: FontWeight.bold)),
+                                ),
                           ],
                         ),
                       );

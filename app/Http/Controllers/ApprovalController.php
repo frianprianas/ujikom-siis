@@ -19,6 +19,8 @@ class ApprovalController extends Controller
      */
     public function index(Request $request): View
     {
+        Peminjaman::cancelExpiredPendingLoans();
+
         $status = $request->query('status');
 
         $query = Peminjaman::with(['user', 'approvedBy', 'details.alat', 'details.unitAlat'])

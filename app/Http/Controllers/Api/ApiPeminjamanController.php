@@ -18,6 +18,9 @@ class ApiPeminjamanController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        // Batalkan otomatis pemesanan yang melebihi batas 1 jam tanpa tindak lanjut
+        Peminjaman::cancelExpiredPendingLoans();
+
         $user = $request->user();
         $status = $request->query('status');
 
@@ -61,6 +64,7 @@ class ApiPeminjamanController extends Controller
             'keperluan' => ['nullable', 'string', 'max:500'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.alat_id' => ['required', 'integer', 'exists:alat,id'],
+            'items.*.unit_alat_id' => ['nullable', 'integer', 'exists:unit_alat,id'],
             'items.*.jumlah' => ['required', 'integer', 'min:1'],
         ]);
 
@@ -73,33 +77,66 @@ class ApiPeminjamanController extends Controller
                         'message' => "Stok untuk '{$alat->nama_alat}' tidak mencukupi (Tersedia: {$alat->stok_tersedia} unit).",
                     ], 422);
                 }
+
+                if (!empty($item['unit_alat_id'])) {
+                    $unit = \App\Models\UnitAlat::where('id', $item['unit_alat_id'])
+                        ->where('alat_id', $alat->id)
+                        ->first();
+
+                    if (!$unit || $unit->status !== 'tersedia') {
+                        return response()->json([
+                            'success' => false,
+                            'message' => "Unit fisik spesifik yang dipilih ({$unit?->kode_unit}) sedang tidak tersedia untuk dipinjam.",
+                        ], 422);
+                    }
+                }
             }
+
+            $keperluan = $validated['keperluan'] ?? '';
+            $catatanText = trim("Keperluan: {$keperluan} [Batas Konfirmasi: Maks 1 Jam Tatap Muka di Sarpras]");
 
             $peminjaman = Peminjaman::create([
                 'user_id' => $user->id,
                 'tanggal_pengajuan' => now(),
                 'tanggal_pinjam' => $validated['tanggal_pinjam'],
                 'tanggal_harus_kembali' => $validated['tanggal_harus_kembali'],
-                'catatan_approval' => !empty($validated['keperluan']) ? 'Keperluan: ' . $validated['keperluan'] : null,
+                'catatan_approval' => $catatanText,
                 'status' => 'menunggu_persetujuan',
             ]);
 
             foreach ($validated['items'] as $item) {
                 $alat = Alat::findOrFail($item['alat_id']);
+                $unitAlatId = null;
+
+                if (!empty($item['unit_alat_id'])) {
+                    $unit = \App\Models\UnitAlat::findOrFail($item['unit_alat_id']);
+                    $unitAlatId = $unit->id;
+                    $unit->update(['status' => 'dipinjam']);
+                } else {
+                    $availableUnit = $alat->units()->where('status', 'tersedia')->first();
+                    if ($availableUnit) {
+                        $unitAlatId = $availableUnit->id;
+                        $availableUnit->update(['status' => 'dipinjam']);
+                    }
+                }
 
                 DetailPeminjaman::create([
                     'peminjaman_id' => $peminjaman->id,
                     'alat_id' => $alat->id,
+                    'unit_alat_id' => $unitAlatId,
                     'jumlah' => $item['jumlah'],
-                    'kondisi_saat_pinjam' => in_array($alat->kondisi, ['baik', 'rusak_ringan']) ? $alat->kondisi : 'rusak_ringan',
+                    'kondisi_saat_pinjam' => in_array($alat->kondisi, ['baik', 'rusak_ringan']) ? $alat->kondisi : 'baik',
                 ]);
+
+                // Kurangi stok sementara selama pesanan aktif
+                $alat->decrement('stok_tersedia', $item['jumlah']);
             }
 
-            $peminjaman->load(['details.alat.kategori']);
+            $peminjaman->load(['details.alat.kategori', 'details.unitAlat']);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Pengajuan peminjaman berhasil dibuat.',
+                'message' => 'Pesanan peminjaman berhasil dibuat. Harap segera konfirmasi tatap muka ke ruang Sarpras dalam waktu maksimal 1 jam.',
                 'data' => $peminjaman,
             ], 201);
         });

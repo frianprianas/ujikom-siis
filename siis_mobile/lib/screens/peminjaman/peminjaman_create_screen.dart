@@ -69,73 +69,192 @@ class _PeminjamanCreateScreenState extends State<PeminjamanCreateScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) {
         final availableTools = alatProvider.alatList.where((a) => a.isAvailable).toList();
 
-        return Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 48,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFA7F3D0),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Pilih Alat untuk Dipinjam',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF064E3B)),
-              ),
-              const SizedBox(height: 12),
-              if (availableTools.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
-                  child: Center(
-                    child: Text(
-                      'Tidak ada alat yang stoknya tersedia saat ini.',
-                      style: TextStyle(color: Color(0xFF64748B)),
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.75,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          builder: (_, scrollController) {
+            return Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 48,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFA7F3D0),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
-                )
-              else
-                Expanded(
-                  child: ListView.separated(
-                    itemCount: availableTools.length,
-                    separatorBuilder: (_, __) => const Divider(color: Color(0xFFF1F5F9)),
-                    itemBuilder: (context, i) {
-                      final alat = availableTools[i];
-                      return ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(alat.namaAlat, style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF064E3B))),
-                        subtitle: Text('${alat.kodeAlat} • Stok: ${alat.stokTersedia} unit', style: const TextStyle(color: Color(0xFF64748B))),
-                        trailing: ElevatedButton(
-                          onPressed: () {
-                            peminjamanProvider.addToCart(alat, jumlah: 1);
-                            Navigator.pop(ctx);
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF059669),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                          child: const Text('Pilih', style: TextStyle(fontWeight: FontWeight.bold)),
-                        ),
-                      );
-                    },
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Pilih Unit Alat Spesifik',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF064E3B)),
                   ),
-                ),
-            ],
-          ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Pilih unit fisik yang tersedia untuk dipesan. Setiap pesanan wajib ditindaklanjuti ke Sarpras max 1 jam.',
+                    style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                  ),
+                  const SizedBox(height: 14),
+                  if (availableTools.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 24),
+                      child: Center(
+                        child: Text(
+                          'Tidak ada alat yang stoknya tersedia saat ini.',
+                          style: TextStyle(color: Color(0xFF64748B)),
+                        ),
+                      ),
+                    )
+                  else
+                    Expanded(
+                      child: ListView.separated(
+                        controller: scrollController,
+                        itemCount: availableTools.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        itemBuilder: (context, i) {
+                          final alat = availableTools[i];
+                          final availableUnits = alat.units.where((u) => u.status == 'tersedia').toList();
+
+                          return Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: const Color(0xFFA7F3D0)),
+                            ),
+                            child: Theme(
+                              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                              child: ExpansionTile(
+                                key: ValueKey(alat.id),
+                                tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                                title: Text(
+                                  alat.namaAlat,
+                                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF064E3B)),
+                                ),
+                                subtitle: Text(
+                                  '${alat.kodeAlat} • ${availableUnits.length} Unit Fisik Tersedia',
+                                  style: const TextStyle(fontSize: 12, color: Color(0xFF059669), fontWeight: FontWeight.w600),
+                                ),
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                                    child: Column(
+                                      children: availableUnits.isEmpty
+                                          ? [
+                                              Padding(
+                                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                                child: ElevatedButton(
+                                                  onPressed: () {
+                                                    peminjamanProvider.addToCart(alat, jumlah: 1);
+                                                    Navigator.pop(ctx);
+                                                  },
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor: const Color(0xFF059669),
+                                                    foregroundColor: Colors.white,
+                                                  ),
+                                                  child: const Text('Pilih Alat Ini (1 Unit)'),
+                                                ),
+                                              ),
+                                            ]
+                                          : availableUnits.map((u) {
+                                              final isSelected = peminjamanProvider.cart.any((item) => item.unitAlat?.id == u.id);
+                                              return Container(
+                                                margin: const EdgeInsets.only(bottom: 8),
+                                                padding: const EdgeInsets.all(10),
+                                                decoration: BoxDecoration(
+                                                  color: isSelected ? const Color(0xFFECFDF5) : const Color(0xFFF8FAFC),
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  border: Border.all(
+                                                    color: isSelected ? const Color(0xFF059669) : const Color(0xFFE2E8F0),
+                                                    width: isSelected ? 1.5 : 1,
+                                                  ),
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    Container(
+                                                      padding: const EdgeInsets.all(6),
+                                                      decoration: BoxDecoration(
+                                                        color: const Color(0xFFD1FAE5),
+                                                        borderRadius: BorderRadius.circular(8),
+                                                      ),
+                                                      child: const Icon(Icons.tag, size: 16, color: Color(0xFF059669)),
+                                                    ),
+                                                    const SizedBox(width: 10),
+                                                    Expanded(
+                                                      child: Column(
+                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        children: [
+                                                          Text(
+                                                            u.kodeUnit,
+                                                            style: const TextStyle(
+                                                              fontWeight: FontWeight.bold,
+                                                              fontSize: 13,
+                                                              fontFamily: 'monospace',
+                                                              color: Color(0xFF064E3B),
+                                                            ),
+                                                          ),
+                                                          Text(
+                                                            'SN: ${u.nomorSeri ?? "-"} • Letak: ${u.lokasiSpesifik ?? alat.lokasiPenyimpanan ?? "-"}',
+                                                            style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                                          ),
+                                                          Text(
+                                                            'Kondisi: ${u.kondisiLabel}',
+                                                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF047857)),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                    ElevatedButton(
+                                                      onPressed: isSelected
+                                                          ? null
+                                                          : () {
+                                                              peminjamanProvider.addToCart(alat, unitAlat: u, jumlah: 1);
+                                                              Navigator.pop(ctx);
+                                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                                SnackBar(
+                                                                  content: Text('Unit ${u.kodeUnit} (${alat.namaAlat}) berhasil dipilih.'),
+                                                                  backgroundColor: const Color(0xFF059669),
+                                                                  behavior: SnackBarBehavior.floating,
+                                                                ),
+                                                              );
+                                                            },
+                                                      style: ElevatedButton.styleFrom(
+                                                        backgroundColor: isSelected ? Colors.grey : const Color(0xFF059669),
+                                                        foregroundColor: Colors.white,
+                                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                                      ),
+                                                      child: Text(isSelected ? 'Terpilih' : 'Pilih Unit', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            }).toList(),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
         );
       },
     );
@@ -179,8 +298,8 @@ class _PeminjamanCreateScreenState extends State<PeminjamanCreateScreen> {
             ],
           ),
           content: const Text(
-            'Pengajuan peminjaman Anda berhasil diajukan dan sedang menunggu persetujuan dari Staff / Wakasek Sarpras.',
-            style: TextStyle(color: Color(0xFF334155)),
+            'Pengajuan peminjaman berhasil diajukan.\n\n⏱️ PERHATIAN:\nAnda memiliki waktu MAKSIMAL 1 JAM untuk menemui petugas di ruang Sarpras dan mengambil alat fisik. Jika tidak dikonfirmasi dalam 1 jam, pesanan akan BATAL OTOMATIS dan unit alat dilepas kembali.',
+            style: TextStyle(color: Color(0xFF334155), height: 1.4),
           ),
           actions: [
             ElevatedButton(
@@ -378,55 +497,105 @@ class _PeminjamanCreateScreenState extends State<PeminjamanCreateScreen> {
                         itemBuilder: (context, idx) {
                           final item = peminjamanProvider.cart[idx];
 
-                          return Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      item.alat.namaAlat,
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF064E3B)),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      '${item.alat.kodeAlat} • Tersedia: ${item.alat.stokTersedia}',
-                                      style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                                    ),
-                                  ],
+                          return Container(
+                            margin: const EdgeInsets.symmetric(vertical: 4),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        item.alat.namaAlat,
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF064E3B)),
+                                      ),
+                                      if (item.unitAlat != null) ...[
+                                        const SizedBox(height: 3),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFECFDF5),
+                                            borderRadius: BorderRadius.circular(6),
+                                            border: Border.all(color: const Color(0xFFA7F3D0)),
+                                          ),
+                                          child: Text(
+                                            'Unit Fisik: ${item.unitAlat!.kodeUnit}',
+                                            style: const TextStyle(fontSize: 11, fontFamily: 'monospace', fontWeight: FontWeight.bold, color: Color(0xFF047857)),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'SN: ${item.unitAlat!.nomorSeri ?? "-"} • Letak: ${item.unitAlat!.lokasiSpesifik ?? item.alat.lokasiPenyimpanan ?? "-"}',
+                                          style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                        ),
+                                      ] else ...[
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          '${item.alat.kodeAlat} • Tersedia: ${item.alat.stokTersedia}',
+                                          style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
                                 ),
-                              ),
 
-                              // Stepper (+ / -)
-                              Row(
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.remove_circle_outline, size: 20, color: Color(0xFF059669)),
-                                    onPressed: () {
-                                      peminjamanProvider.updateQuantity(item.alat.id, item.jumlah - 1);
-                                    },
+                                if (item.unitAlat != null)
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFD1FAE5),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: const Text('1 Unit', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF065F46))),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red),
+                                        onPressed: () {
+                                          peminjamanProvider.removeFromCart(item.alat.id, unitAlatId: item.unitAlat?.id);
+                                        },
+                                      ),
+                                    ],
+                                  )
+                                else
+                                  Row(
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.remove_circle_outline, size: 20, color: Color(0xFF059669)),
+                                        onPressed: () {
+                                          peminjamanProvider.updateQuantity(item.alat.id, item.jumlah - 1);
+                                        },
+                                      ),
+                                      Text(
+                                        '${item.jumlah}',
+                                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF064E3B)),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.add_circle_outline, size: 20, color: Color(0xFF059669)),
+                                        onPressed: item.jumlah < item.alat.stokTersedia
+                                            ? () {
+                                                peminjamanProvider.updateQuantity(item.alat.id, item.jumlah + 1);
+                                              }
+                                            : null,
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red),
+                                        onPressed: () {
+                                          peminjamanProvider.removeFromCart(item.alat.id);
+                                        },
+                                      ),
+                                    ],
                                   ),
-                                  Text(
-                                    '${item.jumlah}',
-                                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF064E3B)),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.add_circle_outline, size: 20, color: Color(0xFF059669)),
-                                    onPressed: item.jumlah < item.alat.stokTersedia
-                                        ? () {
-                                            peminjamanProvider.updateQuantity(item.alat.id, item.jumlah + 1);
-                                          }
-                                        : null,
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red),
-                                    onPressed: () {
-                                      peminjamanProvider.removeFromCart(item.alat.id);
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ],
+                              ],
+                            ),
                           );
                         },
                       ),
@@ -478,7 +647,41 @@ class _PeminjamanCreateScreenState extends State<PeminjamanCreateScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
+
+            // Warning Notice: 1-hour auto-cancellation rule
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF3C7),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFFDE68A)),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.timer_outlined, color: Color(0xFFB45309), size: 22),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Ketentuan Batas Konfirmasi: Maksimal 1 Jam',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF92400E)),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Setelah membuat pesanan, segera temui petugas Sarpras untuk konfirmasi tatap muka dan serah terima unit alat. Jika tidak ada tindak lanjut dalam 1 jam, pesanan akan BATAL OTOMATIS dan unit alat dikembalikan ke inventaris.',
+                          style: TextStyle(fontSize: 11, color: Color(0xFFB45309), height: 1.3),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
 
             // Summary & Submit Bar
             Container(

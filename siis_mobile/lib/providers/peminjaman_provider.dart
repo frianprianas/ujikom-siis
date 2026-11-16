@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import '../models/alat_model.dart';
 import '../models/peminjaman_model.dart';
+import '../models/unit_alat_model.dart';
 import '../services/peminjaman_service.dart';
 
 class CartItem {
   final AlatModel alat;
+  final UnitAlatModel? unitAlat;
   int jumlah;
 
-  CartItem({required this.alat, this.jumlah = 1});
+  CartItem({required this.alat, this.unitAlat, this.jumlah = 1});
 }
 
 class PeminjamanProvider extends ChangeNotifier {
@@ -31,23 +33,29 @@ class PeminjamanProvider extends ChangeNotifier {
   bool get isCartEmpty => _cart.isEmpty;
 
   // Cart Management
-  void addToCart(AlatModel alat, {int jumlah = 1}) {
-    final existingIndex = _cart.indexWhere((item) => item.alat.id == alat.id);
-    if (existingIndex >= 0) {
-      final newTotal = _cart[existingIndex].jumlah + jumlah;
-      if (newTotal <= alat.stokTersedia) {
-        _cart[existingIndex].jumlah = newTotal;
-      }
+  void addToCart(AlatModel alat, {UnitAlatModel? unitAlat, int jumlah = 1}) {
+    if (unitAlat != null) {
+      final exists = _cart.any((item) => item.unitAlat?.id == unitAlat.id);
+      if (exists) return;
+      _cart.add(CartItem(alat: alat, unitAlat: unitAlat, jumlah: 1));
     } else {
-      if (jumlah <= alat.stokTersedia) {
-        _cart.add(CartItem(alat: alat, jumlah: jumlah));
+      final existingIndex = _cart.indexWhere((item) => item.alat.id == alat.id && item.unitAlat == null);
+      if (existingIndex >= 0) {
+        final newTotal = _cart[existingIndex].jumlah + jumlah;
+        if (newTotal <= alat.stokTersedia) {
+          _cart[existingIndex].jumlah = newTotal;
+        }
+      } else {
+        if (jumlah <= alat.stokTersedia) {
+          _cart.add(CartItem(alat: alat, jumlah: jumlah));
+        }
       }
     }
     notifyListeners();
   }
 
-  void updateQuantity(int alatId, int newQuantity) {
-    final index = _cart.indexWhere((item) => item.alat.id == alatId);
+  void updateQuantity(int alatId, int newQuantity, {int? unitAlatId}) {
+    final index = _cart.indexWhere((item) => item.alat.id == alatId && item.unitAlat?.id == unitAlatId);
     if (index >= 0) {
       if (newQuantity <= 0) {
         _cart.removeAt(index);
@@ -58,8 +66,12 @@ class PeminjamanProvider extends ChangeNotifier {
     }
   }
 
-  void removeFromCart(int alatId) {
-    _cart.removeWhere((item) => item.alat.id == alatId);
+  void removeFromCart(int alatId, {int? unitAlatId}) {
+    if (unitAlatId != null) {
+      _cart.removeWhere((item) => item.unitAlat?.id == unitAlatId);
+    } else {
+      _cart.removeWhere((item) => item.alat.id == alatId);
+    }
     notifyListeners();
   }
 
@@ -108,6 +120,7 @@ class PeminjamanProvider extends ChangeNotifier {
     final items = _cart
         .map((c) => {
               'alat_id': c.alat.id,
+              'unit_alat_id': c.unitAlat?.id,
               'jumlah': c.jumlah,
             })
         .toList();

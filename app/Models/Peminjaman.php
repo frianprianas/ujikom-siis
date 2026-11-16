@@ -57,6 +57,48 @@ class Peminjaman extends Model
         return $this->status === 'sedang_dipinjam';
     }
 
+    /**
+     * Batalkan otomatis pemesanan/peminjaman 'menunggu_persetujuan' yang tidak ditindaklanjuti
+     * ke petugas Sarpras melebihi batas waktu maksimal 1 jam (60 menit).
+     * Pulihkan stok alat dan kembalikan status unit_alat menjadi 'tersedia'.
+     */
+    public static function cancelExpiredPendingLoans(): int
+    {
+        $cutoff = now()->subHour();
+
+        $expiredLoans = self::with(['details.alat', 'details.unitAlat'])
+            ->where('status', 'menunggu_persetujuan')
+            ->where('tanggal_pengajuan', '<=', $cutoff)
+            ->get();
+
+        $count = 0;
+        foreach ($expiredLoans as $loan) {
+            \Illuminate\Support\Facades\DB::transaction(function () use ($loan) {
+                foreach ($loan->details as $detail) {
+                    // Pulihkan stok alat
+                    $detail->alat?->increment('stok_tersedia', $detail->jumlah);
+
+                    // Pulihkan unit fisik jika ada
+                    if ($detail->unit_alat_id && $detail->unitAlat) {
+                        $detail->unitAlat->update(['status' => 'tersedia']);
+                    }
+                }
+
+                $cancelMsg = '[Batal Otomatis: Melebihi batas waktu 1 jam tanpa tindak lanjut ke ruang Sarpras]';
+                $oldNote = $loan->catatan_approval;
+                $newNote = $oldNote ? "{$oldNote} | {$cancelMsg}" : $cancelMsg;
+
+                $loan->update([
+                    'status' => 'ditolak',
+                    'catatan_approval' => $newNote,
+                ]);
+            });
+            $count++;
+        }
+
+        return $count;
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Eloquent Relationships

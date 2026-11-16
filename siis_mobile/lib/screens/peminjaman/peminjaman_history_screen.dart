@@ -134,6 +134,54 @@ class _PeminjamanHistoryScreenState extends State<PeminjamanHistoryScreen> {
                     style: const TextStyle(fontSize: 13, fontStyle: FontStyle.italic, color: Color(0xFF047857))),
               ],
 
+              if (loan.status == 'menunggu_persetujuan') ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF3C7),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFFDE68A)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.timer_outlined, color: Color(0xFFB45309), size: 20),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Batas konfirmasi pengambilan maksimal 1 jam dari waktu pengajuan. Segera temui petugas di ruang Sarpras agar pesanan tidak batal otomatis.',
+                          style: TextStyle(fontSize: 12, color: Color(0xFF92400E), height: 1.3),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+              if (loan.status == 'ditolak' && (loan.catatanApproval?.contains('Batal Otomatis') ?? false)) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEE2E2),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFFECACA)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.cancel_outlined, color: Color(0xFFDC2626), size: 20),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Pesanan ini telah BATAL OTOMATIS karena melewati batas waktu 1 jam tanpa tindak lanjut serah terima di ruang Sarpras. Unit fisik telah dikembalikan ke inventaris.',
+                          style: TextStyle(fontSize: 12, color: Color(0xFF991B1B), height: 1.3),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
               const SizedBox(height: 16),
               const Text('Alat yang Dipinjam:', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Color(0xFF064E3B))),
               const SizedBox(height: 8),
