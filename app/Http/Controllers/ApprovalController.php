@@ -61,20 +61,15 @@ class ApprovalController extends Controller
         ]);
 
         return DB::transaction(function () use ($request, $peminjaman) {
-            // Cek ketersediaan stok aktual sebelum pengurangan
+            // Cek ketersediaan stok aktual dan alokasikan unit fisik jika belum dialokasikan
             foreach ($peminjaman->details as $detail) {
-                $alat = $detail->alat;
-                if ($alat->stok_tersedia < $detail->jumlah) {
-                    return back()->with('error', "Stok alat '{$alat->nama_alat}' saat ini tidak mencukupi untuk disetujui.");
-                }
-            }
-
-            // Kurangi stok tersedia alat & sinkronkan unit fisik jika ada
-            foreach ($peminjaman->details as $detail) {
-                $detail->alat->decrement('stok_tersedia', $detail->jumlah);
-
                 if (! $detail->unit_alat_id) {
-                    $availableUnit = $detail->alat->units()->where('status', 'tersedia')->first();
+                    $alat = $detail->alat;
+                    if ($alat->stok_tersedia < $detail->jumlah) {
+                        return back()->with('error', "Stok alat '{$alat->nama_alat}' saat ini tidak mencukupi untuk disetujui.");
+                    }
+                    $alat->decrement('stok_tersedia', $detail->jumlah);
+                    $availableUnit = $alat->units()->where('status', 'tersedia')->first();
                     if ($availableUnit) {
                         $detail->update(['unit_alat_id' => $availableUnit->id]);
                         $availableUnit->update(['status' => 'dipinjam']);
@@ -106,7 +101,7 @@ class ApprovalController extends Controller
      */
     public function reject(Request $request, $id): RedirectResponse
     {
-        $peminjaman = Peminjaman::findOrFail($id);
+        $peminjaman = Peminjaman::with('details.alat', 'details.unitAlat')->findOrFail($id);
 
         if ($peminjaman->status !== 'menunggu_persetujuan') {
             return back()->with('error', 'Hanya pengajuan berstatus Menunggu Persetujuan yang dapat ditolak.');
@@ -118,19 +113,29 @@ class ApprovalController extends Controller
             'catatan_approval.required' => 'Wajib menyertakan alasan penolakan peminjaman.',
         ]);
 
-        $catatanInput = $request->input('catatan_approval');
-        $catatanFinal = $peminjaman->catatan_approval 
-            ? "{$peminjaman->catatan_approval} | Alasan Penolakan: {$catatanInput}" 
-            : $catatanInput;
+        return DB::transaction(function () use ($request, $peminjaman) {
+            // Pulihkan stok dan status unit fisik jika sebelumnya sempat dikunci/dipesan
+            foreach ($peminjaman->details as $detail) {
+                if ($detail->unit_alat_id) {
+                    $detail->alat?->increment('stok_tersedia', $detail->jumlah);
+                    $detail->unitAlat?->update(['status' => 'tersedia']);
+                }
+            }
 
-        $peminjaman->update([
-            'status' => 'ditolak',
-            'approved_by_id' => Auth::id(),
-            'tanggal_approval' => now(),
-            'catatan_approval' => $catatanFinal,
-        ]);
+            $catatanInput = $request->input('catatan_approval');
+            $catatanFinal = $peminjaman->catatan_approval 
+                ? "{$peminjaman->catatan_approval} | Alasan Penolakan: {$catatanInput}" 
+                : $catatanInput;
 
-        return back()->with('success', "Pengajuan #{$peminjaman->id} telah ditolak.");
+            $peminjaman->update([
+                'status' => 'ditolak',
+                'approved_by_id' => Auth::id(),
+                'tanggal_approval' => now(),
+                'catatan_approval' => $catatanFinal,
+            ]);
+
+            return back()->with('success', "Pengajuan #{$peminjaman->id} telah ditolak dan unit fisik telah dikembalikan ke inventaris.");
+        });
     }
 
     /**

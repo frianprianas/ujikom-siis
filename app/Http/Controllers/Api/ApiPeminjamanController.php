@@ -168,17 +168,14 @@ class ApiPeminjamanController extends Controller
 
         return DB::transaction(function () use ($request, $peminjaman, $user) {
             foreach ($peminjaman->details as $detail) {
-                if ($detail->alat->stok_tersedia < $detail->jumlah) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => "Stok alat '{$detail->alat->nama_alat}' tidak mencukupi.",
-                    ], 422);
-                }
-            }
-
-            foreach ($peminjaman->details as $detail) {
-                $detail->alat->decrement('stok_tersedia', $detail->jumlah);
                 if (! $detail->unit_alat_id) {
+                    if ($detail->alat->stok_tersedia < $detail->jumlah) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => "Stok alat '{$detail->alat->nama_alat}' tidak mencukupi.",
+                        ], 422);
+                    }
+                    $detail->alat->decrement('stok_tersedia', $detail->jumlah);
                     $availableUnit = $detail->alat->units()->where('status', 'tersedia')->first();
                     if ($availableUnit) {
                         $detail->update(['unit_alat_id' => $availableUnit->id]);
@@ -217,24 +214,34 @@ class ApiPeminjamanController extends Controller
             ], 403);
         }
 
-        $peminjaman = Peminjaman::findOrFail($id);
+        $peminjaman = Peminjaman::with('details.alat', 'details.unitAlat')->findOrFail($id);
 
         $request->validate([
             'catatan_approval' => ['required', 'string', 'max:500'],
         ]);
 
-        $peminjaman->update([
-            'status' => 'ditolak',
-            'approved_by_id' => $user->id,
-            'tanggal_approval' => now(),
-            'catatan_approval' => $request->input('catatan_approval'),
-        ]);
+        return DB::transaction(function () use ($request, $peminjaman, $user) {
+            // Pulihkan stok dan status unit fisik jika sempat dikunci saat pemesanan
+            foreach ($peminjaman->details as $detail) {
+                if ($detail->unit_alat_id) {
+                    $detail->alat?->increment('stok_tersedia', $detail->jumlah);
+                    $detail->unitAlat?->update(['status' => 'tersedia']);
+                }
+            }
 
-        return response()->json([
-            'success' => true,
-            'message' => "Pengajuan #{$peminjaman->id} telah ditolak.",
-            'data' => $peminjaman,
-        ]);
+            $peminjaman->update([
+                'status' => 'ditolak',
+                'approved_by_id' => $user->id,
+                'tanggal_approval' => now(),
+                'catatan_approval' => $request->input('catatan_approval'),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Pengajuan #{$peminjaman->id} telah ditolak dan unit fisik telah dikembalikan ke inventaris.",
+                'data' => $peminjaman->fresh(['details.alat', 'details.unitAlat']),
+            ]);
+        });
     }
 
     /**
