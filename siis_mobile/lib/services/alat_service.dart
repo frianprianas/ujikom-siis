@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import '../config/api_constants.dart';
 import '../models/alat_model.dart';
 import '../models/kategori_model.dart';
+import '../models/unit_alat_model.dart';
 import 'api_service.dart';
 
 class AlatService {
@@ -54,6 +55,9 @@ class AlatService {
           'success': true,
           'message': response.data['message'],
           'alat': AlatModel.fromJson(response.data['data']),
+          'unit': response.data['unit'] != null
+              ? UnitAlatModel.fromJson(response.data['unit'])
+              : null,
         };
       }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 import '../../models/alat_model.dart';
+import '../../models/unit_alat_model.dart';
 import '../../providers/alat_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/peminjaman_provider.dart';
@@ -14,9 +15,19 @@ class QrScannerScreen extends StatefulWidget {
 }
 
 class _QrScannerScreenState extends State<QrScannerScreen> {
-  final MobileScannerController _cameraController = MobileScannerController();
+  late final MobileScannerController _cameraController;
   bool _isProcessing = false;
   final TextEditingController _manualInputController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _cameraController = MobileScannerController(
+      detectionSpeed: DetectionSpeed.noDuplicates,
+      facing: CameraFacing.back,
+      torchEnabled: false,
+    );
+  }
 
   @override
   void dispose() {
@@ -31,7 +42,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
     final List<Barcode> barcodes = capture.barcodes;
     for (final barcode in barcodes) {
       final code = barcode.rawValue;
-      if (code != null && code.isNotEmpty) {
+      if (code != null && code.trim().isNotEmpty) {
         setState(() => _isProcessing = true);
         await _processScannedCode(code);
         break;
@@ -40,14 +51,21 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
   }
 
   Future<void> _processScannedCode(String rawCode) async {
+    // Bersihkan URL jika QR Code berisi URL lengkap, ambil kode di ujungnya
+    var cleanCode = rawCode.trim();
+    if (cleanCode.contains('/')) {
+      cleanCode = cleanCode.split('/').last.trim();
+    }
+
     final alatProvider = context.read<AlatProvider>();
-    final result = await alatProvider.scanAlat(rawCode);
+    final result = await alatProvider.scanAlat(cleanCode);
 
     if (!mounted) return;
 
     if (result['success'] == true) {
       final alat = result['alat'] as AlatModel;
-      _showScanResultSheet(alat);
+      final unit = result['unit'] as UnitAlatModel?;
+      _showScanResultSheet(alat, scannedUnit: unit);
     } else {
       showDialog(
         context: context,
@@ -57,18 +75,31 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
             children: [
               Icon(Icons.error_outline, color: Colors.red),
               SizedBox(width: 8),
-              Text('Alat Tidak Ditemukan'),
+              Expanded(
+                child: Text('Alat Tidak Ditemukan', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
             ],
           ),
-          content: Text(result['message'] ?? 'Kode alat tidak terdaftar dalam sistem SIIS.'),
+          content: Text(result['message'] ?? "Kode '$cleanCode' tidak terdaftar dalam sistem SIIS."),
           actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                setState(() => _isProcessing = false);
+                _showManualInputDialog();
+              },
+              child: const Text('Input Manual', style: TextStyle(color: Color(0xFF059669), fontWeight: FontWeight.bold)),
+            ),
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(ctx);
                 setState(() => _isProcessing = false);
               },
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669)),
-              child: const Text('Pindai Lagi', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF059669),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Pindai Lagi', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -76,7 +107,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
     }
   }
 
-  void _showScanResultSheet(AlatModel alat) {
+  void _showScanResultSheet(AlatModel alat, {UnitAlatModel? scannedUnit}) {
     final authProvider = context.read<AuthProvider>();
     final peminjamanProvider = context.read<PeminjamanProvider>();
 
@@ -98,13 +129,13 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Row(
+                  Row(
                     children: [
-                      Icon(Icons.check_circle, color: Color(0xFF059669), size: 24),
-                      SizedBox(width: 8),
+                      const Icon(Icons.check_circle, color: Color(0xFF059669), size: 24),
+                      const SizedBox(width: 8),
                       Text(
-                        'Alat Teridentifikasi',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF064E3B)),
+                        scannedUnit != null ? 'Unit Fisik Teridentifikasi' : 'Alat Teridentifikasi',
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF064E3B)),
                       ),
                     ],
                   ),
@@ -120,6 +151,59 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
               const SizedBox(height: 12),
               const Divider(color: Color(0xFFE2E8F0)),
               const SizedBox(height: 8),
+
+              // Jika unit spesifik terdeteksi
+              if (scannedUnit != null) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFECFDF5),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFA7F3D0)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.qr_code_2, size: 18, color: Color(0xFF059669)),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Unit: ${scannedUnit.kodeUnit}',
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF064E3B)),
+                          ),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: scannedUnit.isTersedia() ? const Color(0xFFD1FAE5) : const Color(0xFFFEE2E2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              scannedUnit.status.toUpperCase(),
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: scannedUnit.isTersedia() ? const Color(0xFF065F46) : const Color(0xFF991B1B),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (scannedUnit.nomorSeri != null && scannedUnit.nomorSeri!.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'No. Seri: ${scannedUnit.nomorSeri}',
+                          style: const TextStyle(fontSize: 12, color: Color(0xFF047857), fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+
               Text(
                 alat.namaAlat,
                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF064E3B)),
@@ -156,7 +240,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
               ),
               const SizedBox(height: 24),
 
-              if (authProvider.isPeminjam && alat.isAvailable)
+              if (authProvider.isPeminjam && (scannedUnit != null ? scannedUnit.isTersedia() : alat.isAvailable))
                 Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
@@ -174,18 +258,25 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                   ),
                   child: ElevatedButton.icon(
                     onPressed: () {
-                      peminjamanProvider.addToCart(alat, jumlah: 1);
+                      peminjamanProvider.addToCart(alat, jumlah: 1, unitAlat: scannedUnit);
                       Navigator.pop(ctx);
                       setState(() => _isProcessing = false);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('${alat.namaAlat} berhasil ditambahkan ke keranjang.'),
+                          content: Text(
+                            scannedUnit != null
+                                ? 'Unit ${scannedUnit.kodeUnit} berhasil ditambahkan ke keranjang.'
+                                : '${alat.namaAlat} berhasil ditambahkan ke keranjang.',
+                          ),
                           backgroundColor: const Color(0xFF059669),
                         ),
                       );
                     },
                     icon: const Icon(Icons.add_shopping_cart, color: Colors.white),
-                    label: const Text('Tambahkan ke Keranjang Pinjam', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                    label: Text(
+                      scannedUnit != null ? 'Pilih Unit (${scannedUnit.kodeUnit})' : 'Tambahkan ke Keranjang Pinjam',
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.transparent,
                       shadowColor: Colors.transparent,
@@ -219,15 +310,34 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('Input Kode Manual', style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF064E3B))),
-        content: TextField(
-          controller: _manualInputController,
-          decoration: InputDecoration(
-            hintText: 'Contoh: PROJ-001 / MIC-001',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Masukkan kode master alat atau kode unit fisik:',
+              style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _manualInputController,
+              autofocus: true,
+              textCapitalization: TextCapitalization.characters,
+              decoration: InputDecoration(
+                hintText: 'Misal: PROJ-001 atau PROJ-001-01',
+                hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
+                filled: true,
+                fillColor: const Color(0xFFF8FAFC),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal', style: TextStyle(color: Color(0xFF64748B)))),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal', style: TextStyle(color: Color(0xFF64748B))),
+          ),
           ElevatedButton(
             onPressed: () {
               final code = _manualInputController.text.trim();
@@ -242,9 +352,88 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            child: const Text('Cari', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text('Cari Alat', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState(MobileScannerException error) {
+    final bool isPermissionDenied = error.errorCode == MobileScannerErrorCode.permissionDenied;
+    final String errorTitle = isPermissionDenied
+        ? 'Izin Akses Kamera Diperlukan'
+        : 'Kamera Tidak Tersedia / Error';
+    final String errorMsg = isPermissionDenied
+        ? 'Aktifkan izin kamera pada perangkat untuk memindai QR Code alat secara otomatis.'
+        : 'Kamera tidak dapat diaktifkan (${error.errorDetails?.message ?? error.errorCode.message}). Anda tetap dapat memasukkan kode alat atau unit secara manual di bawah.';
+
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                isPermissionDenied ? Icons.no_photography_outlined : Icons.videocam_off_outlined,
+                size: 56,
+                color: const Color(0xFF10B981),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              errorTitle,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              errorMsg,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 13,
+                height: 1.4,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () {
+                _cameraController.start();
+              },
+              icon: const Icon(Icons.refresh, size: 18),
+              label: const Text('Coba Buka Kamera Lagi'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF059669),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _showManualInputDialog,
+              icon: const Icon(Icons.keyboard, size: 18),
+              label: const Text('Ketik Kode Manual'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.white,
+                side: const BorderSide(color: Colors.white38),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -280,6 +469,9 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
           MobileScanner(
             controller: _cameraController,
             onDetect: _onDetect,
+            errorBuilder: (context, error, child) {
+              return _buildErrorState(error);
+            },
           ),
 
           // Scanner Target Frame Overlay with Emerald Accent
@@ -313,23 +505,45 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
             ),
           ),
 
-          // Instructions at bottom
+          // Instructions and manual input shortcut at bottom
           Positioned(
-            bottom: 40,
+            bottom: 30,
             left: 20,
             right: 20,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.75),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
-              ),
-              child: const Text(
-                'Arahkan kamera ke stiker QR Code yang tertera pada alat inventaris sekolah.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
-              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.75),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
+                  ),
+                  child: const Text(
+                    'Arahkan kamera ke stiker QR Code yang tertera pada alat inventaris sekolah.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextButton.icon(
+                  onPressed: _showManualInputDialog,
+                  icon: const Icon(Icons.keyboard, color: Color(0xFF10B981), size: 18),
+                  label: const Text(
+                    'Atau Ketik Kode Alat / Unit Secara Manual',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.black54,
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: const BorderSide(color: Colors.white24),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
 

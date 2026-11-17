@@ -72,5 +72,8 @@ class UnitAlatModel {
         return status;
     }
   }
+
+  bool isTersedia() => status == 'tersedia' && kondisi != 'rusak_berat';
+  bool get isAvailable => isTersedia();
 }
 

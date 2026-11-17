@@ -80,19 +80,30 @@ class _KatalogScreenState extends State<KatalogScreen> {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFECFDF5),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: const Color(0xFFA7F3D0)),
-                          ),
-                          child: Text(
-                            'Kode: ${alat.kodeAlat}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF047857),
+                        InkWell(
+                          onTap: () => _showQrDialog(context, alat.namaAlat, alat.kodeAlat),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFECFDF5),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFA7F3D0)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.qr_code_2, size: 14, color: Color(0xFF047857)),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Kode: ${alat.kodeAlat}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF047857),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -183,7 +194,16 @@ class _KatalogScreenState extends State<KatalogScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(u.kodeUnit, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, fontFamily: 'monospace', color: Color(0xFF0F172A))),
+                                  Row(
+                                    children: [
+                                      Text(u.kodeUnit, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, fontFamily: 'monospace', color: Color(0xFF0F172A))),
+                                      const SizedBox(width: 4),
+                                      InkWell(
+                                        onTap: () => _showQrDialog(context, 'Unit: ${u.kodeUnit} (${alat.namaAlat})', u.kodeUnit),
+                                        child: const Icon(Icons.qr_code, size: 14, color: Color(0xFF059669)),
+                                      ),
+                                    ],
+                                  ),
                                   if (u.catatan != null && u.catatan!.isNotEmpty)
                                     Text(u.catatan!, style: const TextStyle(fontSize: 10, fontStyle: FontStyle.italic, color: Color(0xFF64748B))),
                                 ],
@@ -353,6 +373,100 @@ class _KatalogScreenState extends State<KatalogScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  void _showQrDialog(BuildContext context, String title, String code) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Row(
+          children: [
+            const Icon(Icons.qr_code_2, color: Color(0xFF059669), size: 24),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text(
+                'Barcode / QR Code',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF064E3B)),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close, size: 20),
+              onPressed: () => Navigator.pop(ctx),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
+                ],
+              ),
+              child: Image.network(
+                'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${Uri.encodeComponent(code)}',
+                width: 180,
+                height: 180,
+                loadingBuilder: (ctx, child, progress) {
+                  if (progress == null) return child;
+                  return const SizedBox(
+                    width: 180,
+                    height: 180,
+                    child: Center(child: CircularProgressIndicator(color: Color(0xFF059669))),
+                  );
+                },
+                errorBuilder: (ctx, err, stack) {
+                  return const SizedBox(
+                    width: 180,
+                    height: 180,
+                    child: Center(
+                      child: Text('Gagal memuat QR', style: TextStyle(color: Colors.red, fontSize: 12)),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              code,
+              style: const TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF064E3B),
+                letterSpacing: 1,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+            ),
+          ],
+        ),
+        actions: [
+          Center(
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(ctx),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF059669),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+              ),
+              child: const Text('Tutup', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

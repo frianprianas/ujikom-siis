@@ -7,6 +7,17 @@
     viewMode: 'grid', // 'grid' atau 'table'
     addModalOpen: false,
     editModalOpen: false,
+    qrModalOpen: false,
+    qrData: { title: '', code: '', url: '', printUrl: '' },
+    openQr(title, code, printUrl) {
+        this.qrData = {
+            title: title,
+            code: code,
+            url: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=' + encodeURIComponent(code),
+            printUrl: printUrl
+        };
+        this.qrModalOpen = true;
+    },
     editData: { id: '', kategori_id: '', nama_alat: '', kode_alat: '', kondisi: 'baik', stok_total: 1, stok_tersedia: 1, lokasi_penyimpanan: '' },
     openEdit(alat) {
         this.editData = { ...alat };
@@ -210,10 +221,10 @@
                     @if(auth()->user()->canManageInventaris())
                         <!-- Super Admin, Staff Sarpras, Wakasek Sarpras Controls: Edit & Hapus -->
                         <div class="flex items-center space-x-1.5">
-                            <a href="{{ route('sarpras.alat.qr', $alat) }}" target="_blank"
-                               class="p-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-emerald-800 bg-slate-50 hover:bg-emerald-50 border border-slate-200 transition" title="Cetak Stiker QR Code">
-                                <i data-lucide="qr-code" class="w-3.5 h-3.5"></i>
-                            </a>
+                            <button type="button" @click="openQr('{{ addslashes($alat->nama_alat) }}', '{{ $alat->kode_alat }}', '{{ route('sarpras.alat.qr', $alat) }}')"
+                               class="p-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-emerald-800 bg-slate-50 hover:bg-emerald-50 border border-slate-200 transition" title="Lihat & Cetak QR Code">
+                                <i data-lucide="qr-code" class="w-3.5 h-3.5 text-emerald-600"></i>
+                            </button>
                             <button type="button" @click="openEdit({{ Js::from($alat) }})"
                                     class="flex-1 inline-flex items-center justify-center space-x-1 px-3 py-2 rounded-xl text-xs font-bold text-slate-800 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition">
                                 <i data-lucide="edit-3" class="w-3.5 h-3.5 text-slate-500"></i>
@@ -324,10 +335,10 @@
                                     <span>Unit ({{ $alat->units->count() }})</span>
                                 </a>
                                 @if(auth()->user()->canManageInventaris())
-                                    <a href="{{ route('sarpras.alat.qr', $alat) }}" target="_blank"
-                                       class="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition inline-block" title="Cetak Label Stiker QR">
+                                    <button type="button" @click="openQr('{{ addslashes($alat->nama_alat) }}', '{{ $alat->kode_alat }}', '{{ route('sarpras.alat.qr', $alat) }}')"
+                                       class="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition inline-block" title="Lihat & Cetak Label Stiker QR">
                                         <i data-lucide="qr-code" class="w-3.5 h-3.5 inline"></i>
-                                    </a>
+                                    </button>
                                     <button type="button" @click="openEdit({{ Js::from($alat) }})"
                                             class="px-3 py-1.5 rounded-lg text-xs font-semibold text-emerald-900 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition">
                                         Edit
@@ -481,6 +492,45 @@
             </div>
         </div>
     @endif
+
+    <!-- Modal Preview QR Code Barcode Langsung di Layar -->
+    <div x-show="qrModalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl space-y-4 text-center border border-slate-100" @click.away="qrModalOpen = false">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700">
+                        <i data-lucide="qr-code" class="w-4 h-4"></i>
+                    </div>
+                    <span class="text-xs font-bold text-slate-900 text-left">Barcode / QR Code Alat</span>
+                </div>
+                <button type="button" @click="qrModalOpen = false" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 inline-block">
+                <img :src="qrData.url" :alt="qrData.code" class="w-48 h-48 mx-auto rounded-xl shadow-sm bg-white p-2">
+            </div>
+
+            <div>
+                <p class="font-mono text-base font-extrabold text-emerald-900 tracking-wider" x-text="qrData.code"></p>
+                <p class="text-xs text-slate-600 mt-1 font-medium" x-text="qrData.title"></p>
+                <p class="text-[11px] text-slate-400 mt-1">Dapat dipindai langsung menggunakan kamera Scanner di aplikasi Mobile SIIS.</p>
+            </div>
+
+            <div class="flex items-center space-x-2 pt-2">
+                <a :href="qrData.printUrl" target="_blank"
+                   class="flex-1 inline-flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-md shadow-emerald-500/20 transition">
+                    <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                    <span>Cetak Stiker Fisik</span>
+                </a>
+                <button type="button" @click="qrModalOpen = false"
+                        class="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition">
+                    Tutup
+                </button>
+            </div>
+        </div>
+    </div>
 
 </div>
 @endsection

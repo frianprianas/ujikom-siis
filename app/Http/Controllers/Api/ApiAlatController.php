@@ -80,24 +80,42 @@ class ApiAlatController extends Controller
     }
 
     /**
-     * Scan Barcode / QR Code alat untuk mobile app.
+     * Scan Barcode / QR Code alat untuk mobile app (bisa kode master alat maupun kode unit fisik).
      * GET /api/v1/alat/scan/{kode_alat}
      */
     public function scan(string $kodeAlat): JsonResponse
     {
-        $alat = Alat::with('kategori')->where('kode_alat', trim($kodeAlat))->first();
+        $kode = trim($kodeAlat);
+        $scannedUnit = null;
+
+        // 1. Cari berdasarkan kode master alat (contoh: PROJ-001)
+        $alat = Alat::with(['kategori', 'units'])->where('kode_alat', $kode)->first();
+
+        // 2. Jika tidak ditemukan, cari berdasarkan kode unit fisik individual (contoh: PROJ-001-01) atau nomor seri
+        if (! $alat) {
+            $scannedUnit = \App\Models\UnitAlat::with('alat.kategori')
+                ->where('kode_unit', $kode)
+                ->orWhere('nomor_seri', $kode)
+                ->first();
+
+            if ($scannedUnit && $scannedUnit->alat) {
+                $alat = $scannedUnit->alat;
+                $alat->load(['kategori', 'units']);
+            }
+        }
 
         if (! $alat) {
             return response()->json([
                 'success' => false,
-                'message' => "Alat dengan kode '{$kodeAlat}' tidak ditemukan pada sistem inventaris.",
+                'message' => "Alat atau unit dengan kode '{$kodeAlat}' tidak ditemukan pada sistem inventaris.",
             ], 404);
         }
 
         return response()->json([
             'success' => true,
-            'message' => 'Alat berhasil dipindai.',
+            'message' => $scannedUnit ? "Unit fisik '{$scannedUnit->kode_unit}' berhasil diidentifikasi." : 'Alat berhasil dipindai.',
             'data' => $alat,
+            'unit' => $scannedUnit,
         ]);
     }
 
