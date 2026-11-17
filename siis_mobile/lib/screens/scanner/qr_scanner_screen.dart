@@ -474,77 +474,88 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
             },
           ),
 
-          // Scanner Target Frame Overlay with Emerald Accent
-          Center(
-            child: Container(
-              width: 250,
-              height: 250,
-              decoration: BoxDecoration(
-                border: Border.all(color: const Color(0xFF10B981), width: 3),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Column(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Icon(Icons.crop_free, color: Color(0xFF10B981), size: 36),
-                      Icon(Icons.crop_free, color: Color(0xFF10B981), size: 36),
-                    ],
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Icon(Icons.crop_free, color: Color(0xFF10B981), size: 36),
-                      Icon(Icons.crop_free, color: Color(0xFF10B981), size: 36),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
+          // Scanner Target Frame & Instruction (Hanya tampil jika kamera aktif tanpa error)
+          ValueListenableBuilder<MobileScannerState>(
+            valueListenable: _cameraController,
+            builder: (context, state, child) {
+              if (state.error != null) return const SizedBox.shrink();
 
-          // Instructions and manual input shortcut at bottom
-          Positioned(
-            bottom: 30,
-            left: 20,
-            right: 20,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.75),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
-                  ),
-                  child: const Text(
-                    'Arahkan kamera ke stiker QR Code yang tertera pada alat inventaris sekolah.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextButton.icon(
-                  onPressed: _showManualInputDialog,
-                  icon: const Icon(Icons.keyboard, color: Color(0xFF10B981), size: 18),
-                  label: const Text(
-                    'Atau Ketik Kode Alat / Unit Secara Manual',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                  ),
-                  style: TextButton.styleFrom(
-                    backgroundColor: Colors.black54,
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: const BorderSide(color: Colors.white24),
+              return Stack(
+                children: [
+                  Center(
+                    child: Container(
+                      width: 250,
+                      height: 250,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: const Color(0xFF10B981), width: 3),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Icon(Icons.crop_free, color: Color(0xFF10B981), size: 36),
+                              Icon(Icons.crop_free, color: Color(0xFF10B981), size: 36),
+                            ],
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Icon(Icons.crop_free, color: Color(0xFF10B981), size: 36),
+                              Icon(Icons.crop_free, color: Color(0xFF10B981), size: 36),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
+
+                  // Instructions and manual input shortcut at bottom
+                  Positioned(
+                    bottom: 30,
+                    left: 20,
+                    right: 20,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.75),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
+                          ),
+                          child: const Text(
+                            'Arahkan kamera ke stiker QR Code yang tertera pada alat inventaris sekolah.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        TextButton.icon(
+                          onPressed: _showManualInputDialog,
+                          icon: const Icon(Icons.keyboard, color: Color(0xFF10B981), size: 18),
+                          label: const Text(
+                            'Atau Ketik Kode Alat / Unit Secara Manual',
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                          style: TextButton.styleFrom(
+                            backgroundColor: Colors.black54,
+                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: const BorderSide(color: Colors.white24),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
 
           if (_isProcessing)
